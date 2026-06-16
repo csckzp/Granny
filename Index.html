@@ -1059,6 +1059,7 @@ createApp({
 
     notify(message, type) {
       this.notification = { message: message, type: type || 'success' };
+      if (type === 'error') console.error('[Granny]', message);
       var self = this;
       setTimeout(function() { self.notification = null; }, 3500);
     },
