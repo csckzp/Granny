@@ -878,7 +878,7 @@ function callServer(action, data) {
     google.script.run
       .withSuccessHandler(function(result) {
         if (result == null) {
-          reject(new Error('Server returned an empty response. Open the deployment URL directly and complete any authorization prompt, then reload.'));
+          reject(new Error('Server returned an empty response (null). If you just changed Code.gs, redeploy a NEW version (Deploy → Manage deployments → New version) — the /exec URL runs the deployed version, not your latest save. On a brand-new deployment, open the /exec URL in its own tab once and approve the authorization prompt.'));
         } else if (result.ok === false) {
           reject(new Error(result.error || 'Server returned an error.'));
         } else {
