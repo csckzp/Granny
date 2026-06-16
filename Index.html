@@ -877,7 +877,9 @@ function callServer(action, data) {
   return new Promise(function(resolve, reject) {
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result && result.ok === false) {
+        if (result == null) {
+          reject(new Error('Server returned an empty response. Open the deployment URL directly and complete any authorization prompt, then reload.'));
+        } else if (result.ok === false) {
           reject(new Error(result.error || 'Server returned an error.'));
         } else {
           resolve(result);
