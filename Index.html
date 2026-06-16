@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Granny — Family History</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    /* Hide app until Vue mounts to prevent flash of uncompiled template */
+    [v-cloak] { display: none; }
+
+    /* Thin scrollbars throughout */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+
+    /* Toast slide-up animation */
+    .toast-enter-active, .toast-leave-active { transition: all 0.25s ease; }
+    .toast-enter-from, .toast-leave-to    { opacity: 0; transform: translateY(8px); }
+
+    /* Shared utility classes — written as plain CSS so no @apply processing is needed.
+       Tailwind's Play CDN does not reliably process @apply in <style> tags. */
+
+    .btn-primary {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.375rem; padding: 0.5rem 1rem;
+      background-color: #4f46e5; color: #fff;
+      font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem;
+      border: none; cursor: pointer; transition: background-color 0.15s;
+    }
+    .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.375rem; padding: 0.5rem 1rem;
+      background-color: transparent; color: #475569;
+      font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem;
+      border: 1px solid #e2e8f0; cursor: pointer; transition: background-color 0.15s;
+    }
+    .btn-secondary:hover:not(:disabled) { background-color: #f8fafc; }
+    .btn-secondary:disabled { opacity: 0.4; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      font-size: 0.875rem; font-weight: 500; color: #4f46e5;
+      background: none; border: none; cursor: pointer; transition: color 0.15s;
+    }
+    .btn-ghost:hover { color: #3730a3; }
+
+    .btn-danger {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 0.375rem; padding: 0.5rem 1rem;
+      background-color: transparent; color: #dc2626;
+      font-size: 0.875rem; font-weight: 500; border-radius: 0.5rem;
+      border: 1px solid #fecaca; cursor: pointer; transition: background-color 0.15s;
+    }
+    .btn-danger:hover { background-color: #fef2f2; }
+
+    .form-label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: #64748b; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 0.375rem;
+    }
+
+    .form-input {
+      display: block; width: 100%; padding: 0.5rem 0.75rem;
+      font-size: 0.875rem; color: #334155; background-color: #fff;
+      border: 1px solid #e2e8f0; border-radius: 0.5rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none; box-sizing: border-box;
+    }
+    .form-input:focus {
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.35);
+    }
+    .form-input:disabled { background-color: #f8fafc; color: #94a3b8; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(2px);
+      z-index: 40; display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-box {
+      background-color: #fff; border-radius: 1rem;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08);
+      width: 100%; max-width: 32rem;
+      display: flex; flex-direction: column;
+      max-height: 92vh; overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
+    }
+
+    .modal-body   { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1; }
+
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 0.75rem;
+      padding: 1rem 1.5rem; background-color: #f8fafc;
+      border-top: 1px solid #f1f5f9; flex-shrink: 0;
+    }
+
+    .section-heading {
+      font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.15em; color: #94a3b8; margin-bottom: 0.75rem;
+    }
+
+    .card {
+      background-color: #fff; border-radius: 0.75rem;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.05);
+    }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 font-sans antialiased">
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ROOT APP
+════════════════════════════════════════════════════════════════════════════ -->
+<div id="app" v-cloak class="h-screen flex flex-col overflow-hidden">
+
+  <!-- ── Navbar ──────────────────────────────────────────────────────────── -->
+  <header class="bg-indigo-700 text-white flex items-center justify-between px-5 py-3 z-20 shrink-0 shadow-lg">
+    <div class="flex items-center gap-2.5">
+      <!-- Tree icon -->
+      <svg class="w-5 h-5 text-indigo-300" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10 2a1 1 0 011 1v1.28A4.5 4.5 0 0113.5 8.5a4.48 4.48 0 01-.93 2.75L14 12.5a1 1 0 01-1.415 1.415L11 12.33V16h1a1 1 0 110 2H8a1 1 0 110-2h1v-3.67l-1.585 1.585A1 1 0 015.999 12.5l1.43-1.25A4.5 4.5 0 019 8.5a4.48 4.48 0 012.5-4.028V3a1 1 0 011-1z"/>
+      </svg>
+      <span class="font-bold tracking-tight text-lg">Granny</span>
+    </div>
+    <span class="text-xs text-indigo-300 font-medium hidden sm:block">Family History Manager</span>
+  </header>
+
+  <!-- ── Body layout ─────────────────────────────────────────────────────── -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
+
+      <!-- Search -->
+      <div class="p-4 border-b border-slate-100">
+        <div class="relative">
+          <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search people…"
+            class="w-full pl-9 pr-9 py-2 rounded-lg bg-slate-100 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+          />
+          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+      </div>
+
+      <!-- People list -->
+      <div class="flex-1 overflow-y-auto">
+        <div v-if="isLoading" class="p-6 text-center text-slate-400 text-sm">Loading…</div>
+        <div v-else-if="filteredPeople.length === 0" class="p-8 text-center">
+          <p class="text-slate-400 text-sm">{{ searchQuery ? 'No results found.' : 'No people added yet.' }}</p>
+        </div>
+        <ul v-else class="py-1.5">
+          <li
+            v-for="person in filteredPeople"
+            :key="person.person_id"
+            @click="selectPerson(person.person_id)"
+            :class="[
+              'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-l-4',
+              activePerson && activePerson.person_id === person.person_id
+                ? 'bg-indigo-50 border-indigo-500'
+                : 'hover:bg-slate-50 border-transparent'
+            ]"
+          >
+            <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0', avatarColor(person)]">
+              {{ initials(person) }}
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-slate-800 truncate">{{ fullName(person) }}</div>
+              <div class="text-xs text-slate-400 truncate">
+                {{ person.birth_date || '?' }} –
+                <span v-if="person.is_living === true || person.is_living === 'TRUE'" class="text-green-500">Living</span>
+                <span v-else>{{ person.death_date || '?' }}</span>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Add person button -->
+      <div class="p-3 border-t border-slate-100">
+        <button @click="openPersonModal()" class="btn-primary w-full">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Person
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Main content ───────────────────────────────────────────────────── -->
+    <main :class="['flex-1 bg-slate-100', currentView === 'tree' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto']">
+
+      <!-- Empty state -->
+      <div v-if="!activePerson" class="h-full flex flex-col items-center justify-center text-center p-8 select-none">
+        <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+        <h2 class="text-slate-500 font-semibold text-lg">Select a person to begin</h2>
+        <p class="text-slate-400 text-sm mt-1">Choose someone from the sidebar, or add a new person.</p>
+      </div>
+
+      <!-- Person selected -->
+      <template v-else>
+
+        <!-- Tab bar (sticky) -->
+        <div class="bg-white border-b border-slate-200 px-6 sticky top-0 z-10 shadow-sm">
+          <nav class="flex gap-6">
+            <button
+              @click="currentView = 'profile'"
+              :class="['py-3.5 text-sm font-semibold border-b-2 transition-colors -mb-px',
+                currentView === 'profile' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800']"
+            >Profile</button>
+            <button
+              @click="currentView = 'events'"
+              :class="['py-3.5 text-sm font-semibold border-b-2 transition-colors -mb-px flex items-center gap-2',
+                currentView === 'events' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800']"
+            >
+              Events
+              <span
+                v-if="pedigreePayload && pedigreePayload.events && pedigreePayload.events.length"
+                class="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full"
+              >{{ pedigreePayload.events.length }}</span>
+            </button>
+            <button
+              @click="currentView = 'tree'"
+              :class="['py-3.5 text-sm font-semibold border-b-2 transition-colors -mb-px flex items-center gap-1.5',
+                currentView === 'tree' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800']"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+              Tree
+            </button>
+          </nav>
+        </div>
+
+        <!-- ════════════════ PROFILE VIEW ════════════════ -->
+        <div v-if="currentView === 'profile'" class="p-6 max-w-2xl mx-auto space-y-5">
+
+          <!-- Person header card -->
+          <div class="card p-6">
+            <div class="flex items-start gap-4">
+              <div :class="['w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shrink-0', avatarColor(activePerson)]">
+                {{ initials(activePerson) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <h1 class="text-2xl font-bold text-slate-900 leading-tight">{{ fullName(activePerson) }}</h1>
+                <div class="flex flex-wrap gap-x-4 mt-1.5 text-sm text-slate-500">
+                  <span v-if="activePerson.birth_date">b. {{ activePerson.birth_date }}{{ activePerson.birth_place ? ', ' + activePerson.birth_place : '' }}</span>
+                  <span v-if="activePerson.is_living === true || activePerson.is_living === 'TRUE'" class="text-green-600 font-medium">Living</span>
+                  <span v-else-if="activePerson.death_date">d. {{ activePerson.death_date }}{{ activePerson.death_place ? ', ' + activePerson.death_place : '' }}</span>
+                </div>
+                <div class="flex items-center gap-2 mt-3">
+                  <span :class="sexBadgeClass(activePerson.sex)">{{ sexLabel(activePerson.sex) }}</span>
+                  <span class="text-xs text-slate-400 font-mono">{{ activePerson.person_id }}</span>
+                </div>
+              </div>
+              <div class="flex gap-2 shrink-0 mt-1">
+                <button @click="openPersonModal(activePerson)" class="btn-secondary text-xs px-3 py-1.5">Edit</button>
+                <button @click="confirmDeletePerson(activePerson.person_id)" class="btn-danger text-xs px-3 py-1.5">Delete</button>
+              </div>
+            </div>
+            <p v-if="activePerson.notes" class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 italic leading-relaxed">
+              {{ activePerson.notes }}
+            </p>
+          </div>
+
+          <!-- Pedigree loading spinner -->
+          <div v-if="isPedigreeLoading" class="card p-10 flex flex-col items-center text-slate-400">
+            <svg class="w-6 h-6 animate-spin mb-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+            <span class="text-sm">Loading family data…</span>
+          </div>
+
+          <template v-else-if="pedigreePayload">
+
+            <!-- ── Parents ── -->
+            <div class="card p-5">
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="section-heading">Parents</h2>
+                <button @click="openFamilyModal('parents')" class="btn-ghost text-xs">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Link family
+                </button>
+              </div>
+
+              <div v-if="!pedigreePayload.parents || pedigreePayload.parents.length === 0"
+                   class="text-sm text-slate-400 py-2">No parents recorded.</div>
+
+              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  v-for="(entry, i) in pedigreePayload.parents"
+                  :key="i"
+                  @click="selectPerson(entry.person.person_id)"
+                  class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-indigo-50 hover:border-indigo-100 transition-colors group"
+                >
+                  <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0', avatarColor(entry.person)]">
+                    {{ initials(entry.person) }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-semibold text-slate-700 truncate group-hover:text-indigo-700 transition-colors">{{ fullName(entry.person) }}</div>
+                    <div class="text-xs text-slate-400">{{ entry.person.birth_date || '?' }}</div>
+                  </div>
+                  <span :class="relBadgeClass(entry.relationship_type)" class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0">{{ entry.relationship_type }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Spouses & Children ── -->
+            <div class="card p-5">
+              <div class="flex items-center justify-between mb-1">
+                <h2 class="section-heading">Spouses & Children</h2>
+                <button @click="openFamilyModal('spouses')" class="btn-ghost text-xs">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add union
+                </button>
+              </div>
+
+              <div v-if="!pedigreePayload.spouses || pedigreePayload.spouses.length === 0"
+                   class="text-sm text-slate-400 py-2">No marriages or unions recorded.</div>
+
+              <div v-else class="space-y-3">
+                <div v-for="(entry, i) in pedigreePayload.spouses" :key="i" class="rounded-xl border border-slate-200 overflow-hidden">
+                  <!-- Union header — clicking sets currentFamily so the rest of the
+                       UI (e.g. a future Family Detail panel) can react to it -->
+                  <div
+                    class="flex items-center gap-3 px-4 py-3 bg-slate-50 cursor-pointer"
+                    @click="currentFamily = entry.family"
+                    :class="currentFamily && currentFamily.family_id === entry.family.family_id ? 'ring-2 ring-inset ring-indigo-300' : ''"
+                    title="Click to focus this family"
+                  >
+                    <template v-if="entry.spouse">
+                      <div
+                        :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 cursor-pointer', avatarColor(entry.spouse)]"
+                        @click="selectPerson(entry.spouse.person_id)"
+                      >{{ initials(entry.spouse) }}</div>
+                      <div class="flex-1 min-w-0 cursor-pointer" @click="selectPerson(entry.spouse.person_id)">
+                        <div class="text-sm font-semibold text-slate-700 hover:text-indigo-700 transition-colors">{{ fullName(entry.spouse) }}</div>
+                        <div class="text-xs text-slate-400">
+                          {{ capitalise(entry.family.union_type) || 'Union' }}
+                          <span v-if="entry.family.union_date"> · {{ entry.family.union_date }}</span>
+                        </div>
+                      </div>
+                    </template>
+                    <div v-else class="text-sm text-slate-500 italic flex-1">Unknown spouse</div>
+                    <span v-if="entry.family.union_end_reason" class="text-xs text-slate-400 bg-slate-200 px-2 py-0.5 rounded-full shrink-0">
+                      {{ entry.family.union_end_reason }}
+                    </span>
+                  </div>
+                  <!-- Children list -->
+                  <div class="px-4 py-2 divide-y divide-slate-100">
+                    <div v-if="!entry.children || entry.children.length === 0"
+                         class="py-2 text-xs text-slate-400">No children in this union.</div>
+                    <div
+                      v-for="(child, j) in entry.children"
+                      :key="j"
+                      @click="selectPerson(child.person.person_id)"
+                      class="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-slate-50 -mx-4 px-4 rounded transition-colors group"
+                    >
+                      <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0', avatarColor(child.person)]">
+                        {{ initials(child.person) }}
+                      </div>
+                      <span class="text-sm text-slate-700 flex-1 group-hover:text-indigo-700 transition-colors">{{ fullName(child.person) }}</span>
+                      <span :class="relBadgeClass(child.relationship_type)" class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0">{{ child.relationship_type }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </template>
+        </div><!-- /profile view -->
+
+        <!-- ════════════════ EVENT MANAGER ════════════════ -->
+        <div v-if="currentView === 'events'" class="p-6 max-w-2xl mx-auto">
+
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base font-bold text-slate-700">
+              Events linked to
+              <span class="text-indigo-600">{{ fullName(activePerson) }}</span>
+            </h2>
+            <button @click="openEventModal()" class="btn-primary">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              New Event
+            </button>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="isPedigreeLoading" class="card p-10 flex flex-col items-center text-slate-400">
+            <svg class="w-6 h-6 animate-spin mb-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+            </svg>
+            <span class="text-sm">Loading…</span>
+          </div>
+
+          <!-- Empty -->
+          <div v-else-if="!pedigreePayload || !pedigreePayload.events || pedigreePayload.events.length === 0"
+               class="card p-12 flex flex-col items-center text-slate-400">
+            <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm font-medium">No events yet.</p>
+            <p class="text-xs mt-1">Create one with "New Event" above.</p>
+          </div>
+
+          <!-- Event cards -->
+          <div v-else class="space-y-4">
+            <div v-for="event in pedigreePayload.events" :key="event.event_id" class="card overflow-hidden">
+              <div class="flex items-start gap-4 p-5">
+                <!-- Type pill -->
+                <div class="shrink-0 pt-0.5">
+                  <span :class="eventTypeBadgeClass(event.event_type)" class="text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+                    {{ event.event_type }}
+                  </span>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="text-base font-semibold text-slate-800">{{ event.title || capitalise(event.event_type) }}</div>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-sm text-slate-500">
+                    <span v-if="event.event_date">{{ event.event_date }}</span>
+                    <span v-if="event.event_place" class="flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      {{ event.event_place }}
+                    </span>
+                  </div>
+                  <p v-if="event.description" class="text-sm text-slate-600 mt-1.5">{{ event.description }}</p>
+                  <p v-if="event.source_citation" class="text-xs text-slate-400 mt-1 italic">Source: {{ event.source_citation }}</p>
+
+                  <!-- Roles & participants -->
+                  <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-slate-500">Your role:</span>
+                    <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">{{ event.role }}</span>
+                    <template v-if="event.co_participants && event.co_participants.length">
+                      <span class="text-slate-300">|</span>
+                      <span class="text-xs text-slate-500">Also present:</span>
+                      <span
+                        v-for="cp in event.co_participants"
+                        :key="cp.person.person_id"
+                        class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full"
+                      >
+                        <span class="cursor-pointer hover:text-indigo-600 transition-colors" @click="selectPerson(cp.person.person_id)">
+                          {{ fullName(cp.person) }}
+                        </span>
+                        <span class="text-slate-400">({{ cp.role }})</span>
+                        <button
+                          @click="unlinkParticipant(event.event_id, cp.person.person_id)"
+                          class="text-slate-300 hover:text-red-500 transition-colors font-bold leading-none ml-0.5"
+                          title="Remove participant"
+                        >×</button>
+                      </span>
+                    </template>
+                  </div>
+
+                  <!-- Inline: link an additional participant to this existing event -->
+                  <div class="mt-3 flex items-center gap-2 flex-wrap">
+                    <select
+                      v-model="inlineAdd[event.event_id].personId"
+                      class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                    >
+                      <option value="">+ Link person…</option>
+                      <option
+                        v-for="p in peopleNotInEvent(event)"
+                        :key="p.person_id"
+                        :value="p.person_id"
+                      >{{ fullName(p) }}</option>
+                    </select>
+                    <select
+                      v-if="inlineAdd[event.event_id].personId"
+                      v-model="inlineAdd[event.event_id].role"
+                      class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                    >
+                      <option value="subject">subject</option>
+                      <option value="spouse">spouse</option>
+                      <option value="child">child</option>
+                      <option value="parent">parent</option>
+                      <option value="witness">witness</option>
+                      <option value="informant">informant</option>
+                      <option value="participant">participant</option>
+                    </select>
+                    <button
+                      v-if="inlineAdd[event.event_id].personId"
+                      @click="linkParticipantInline(event.event_id)"
+                      class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-medium"
+                    >Link</button>
+                  </div>
+                </div>
+
+                <button @click="openEventModal(event)" class="btn-secondary text-xs px-2.5 py-1.5 shrink-0">Edit</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /events view -->
+
+        <!-- ════════════════ TREE VIEW ════════════════ -->
+        <div v-if="currentView === 'tree'" class="flex-1 flex flex-col overflow-hidden relative">
+
+          <!-- Toolbar -->
+          <div class="absolute top-4 right-4 z-10 flex items-center gap-1 bg-white border border-slate-200 rounded-xl shadow-sm p-1">
+            <button @click="zoomIn()" title="Zoom in"
+              class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-lg transition-colors font-bold text-lg leading-none">+</button>
+            <button @click="zoomReset()" title="Reset view"
+              class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            </button>
+            <button @click="zoomOut()" title="Zoom out"
+              class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 rounded-lg transition-colors font-bold text-lg leading-none">−</button>
+          </div>
+
+          <!-- Legend -->
+          <div class="absolute bottom-4 left-4 z-10 bg-white border border-slate-200 rounded-xl shadow-sm px-3 py-2 flex items-center gap-4 text-xs text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-indigo-200 inline-block"></span>Male</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-pink-200 inline-block"></span>Female</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-slate-200 inline-block"></span>Unknown</span>
+            <span class="flex items-center gap-1.5"><span class="w-5 border-t-2 border-dashed border-indigo-400 inline-block"></span>Union</span>
+            <span class="flex items-center gap-1.5"><span class="w-5 border-t border-slate-400 inline-block"></span>Parent / Child</span>
+          </div>
+
+          <!-- No data state -->
+          <div v-if="!pedigreePayload" class="flex-1 flex items-center justify-center text-slate-400 text-sm">
+            Loading family data…
+          </div>
+
+          <!-- D3 canvas: Vue owns the <svg> ref; D3 owns everything inside it -->
+          <svg
+            v-show="pedigreePayload"
+            ref="treeSvg"
+            class="flex-1 w-full"
+            style="display: block; background: #f8fafc;"
+          ></svg>
+
+        </div><!-- /tree view -->
+
+      </template>
+    </main><!-- /main -->
+  </div><!-- /body layout -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: PERSON (Add / Edit)
+════════════════════════════════════════════════════════════════════════════ -->
+<div v-if="showPersonModal" class="modal-backdrop" @click.self="showPersonModal = false">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="text-base font-bold text-slate-800">{{ isEditingPerson ? 'Edit Person' : 'Add New Person' }}</h3>
+      <button @click="showPersonModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">First Name <span class="text-red-400">*</span></label>
+          <input v-model="personForm.first_name" class="form-input" placeholder="e.g. Jane" />
+        </div>
+        <div>
+          <label class="form-label">Middle Name</label>
+          <input v-model="personForm.middle_name" class="form-input" placeholder="Optional" />
+        </div>
+        <div>
+          <label class="form-label">Last Name <span class="text-red-400">*</span></label>
+          <input v-model="personForm.last_name" class="form-input" placeholder="Birth surname" />
+        </div>
+        <div>
+          <label class="form-label">Sex</label>
+          <select v-model="personForm.sex" class="form-input">
+            <option value="">Unknown</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Birth Date</label>
+          <input v-model="personForm.birth_date" class="form-input" placeholder="1923 or 1923-04-15" />
+        </div>
+        <div>
+          <label class="form-label">Birth Place</label>
+          <input v-model="personForm.birth_place" class="form-input" placeholder="City, State" />
+        </div>
+        <div>
+          <label class="form-label">Death Date</label>
+          <input v-model="personForm.death_date" class="form-input" :disabled="personForm.is_living" placeholder="Leave blank if living" />
+        </div>
+        <div>
+          <label class="form-label">Death Place</label>
+          <input v-model="personForm.death_place" class="form-input" :disabled="personForm.is_living" />
+        </div>
+      </div>
+      <label class="flex items-center gap-2.5 mt-4 text-sm text-slate-700 cursor-pointer select-none">
+        <input type="checkbox" v-model="personForm.is_living" class="w-4 h-4 rounded text-indigo-600" />
+        This person is living
+      </label>
+      <div class="mt-4">
+        <label class="form-label">Notes</label>
+        <textarea v-model="personForm.notes" class="form-input resize-none" rows="3" placeholder="Any additional details…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showPersonModal = false" class="btn-secondary">Cancel</button>
+      <button
+        @click="savePerson()"
+        :disabled="isSaving || !personForm.first_name.trim() || !personForm.last_name.trim()"
+        class="btn-primary"
+      >{{ isSaving ? 'Saving…' : (isEditingPerson ? 'Save Changes' : 'Add Person') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: FAMILY (Link Parents / Add Union)
+════════════════════════════════════════════════════════════════════════════ -->
+<div v-if="showFamilyModal" class="modal-backdrop" @click.self="showFamilyModal = false">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="text-base font-bold text-slate-800">
+        {{ familyModalMode === 'parents' ? 'Link Parent Family' : 'Add Union / Marriage' }}
+      </h3>
+      <button @click="showFamilyModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
+    </div>
+    <div class="modal-body space-y-4">
+
+      <!-- Parents mode: pick two parents -->
+      <template v-if="familyModalMode === 'parents'">
+        <div>
+          <label class="form-label">Parent 1</label>
+          <select v-model="familyForm.spouse1_id" class="form-input">
+            <option value="">— Select person —</option>
+            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Parent 2 (optional)</label>
+          <select v-model="familyForm.spouse2_id" class="form-input">
+            <option value="">— None / Unknown —</option>
+            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Relationship of {{ activePerson ? fullName(activePerson) : 'child' }} to this family</label>
+          <select v-model="familyForm.relationship_type" class="form-input">
+            <option value="biological">Biological</option>
+            <option value="adopted">Adopted</option>
+            <option value="step">Step</option>
+            <option value="foster">Foster</option>
+          </select>
+        </div>
+      </template>
+
+      <!-- Spouses mode: pick the other spouse -->
+      <template v-else>
+        <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700">
+          <strong>{{ activePerson ? fullName(activePerson) : '' }}</strong> will be linked as a spouse in this union.
+        </div>
+        <div>
+          <label class="form-label">Other Spouse (optional)</label>
+          <select v-model="familyForm.spouse2_id" class="form-input">
+            <option value="">— None / Unknown —</option>
+            <option
+              v-for="p in peopleList.filter(p => !activePerson || p.person_id !== activePerson.person_id)"
+              :key="p.person_id"
+              :value="p.person_id"
+            >{{ fullName(p) }}</option>
+          </select>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Union Type</label>
+          <select v-model="familyForm.union_type" class="form-input">
+            <option value="married">Married</option>
+            <option value="partnered">Partnered</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Union Date</label>
+          <input v-model="familyForm.union_date" class="form-input" placeholder="e.g. 1905-06-12" />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Union Place</label>
+          <input v-model="familyForm.union_place" class="form-input" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showFamilyModal = false" class="btn-secondary">Cancel</button>
+      <button @click="saveFamily()" :disabled="isSaving" class="btn-primary">
+        {{ isSaving ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: EVENT (Create / Edit + Participant Multi-Select)
+════════════════════════════════════════════════════════════════════════════ -->
+<div v-if="showEventModal" class="modal-backdrop" @click.self="showEventModal = false">
+  <div class="modal-box" style="max-width: 640px;">
+    <div class="modal-header">
+      <h3 class="text-base font-bold text-slate-800">{{ isEditingEvent ? 'Edit Event' : 'Create New Event' }}</h3>
+      <button @click="showEventModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
+    </div>
+    <div class="modal-body space-y-4">
+
+      <!-- Event fields -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Type <span class="text-red-400">*</span></label>
+          <select v-model="eventForm.event_type" class="form-input">
+            <option value="birth">Birth</option>
+            <option value="death">Death</option>
+            <option value="marriage">Marriage</option>
+            <option value="census">Census</option>
+            <option value="immigration">Immigration</option>
+            <option value="military">Military</option>
+            <option value="graduation">Graduation</option>
+            <option value="residence">Residence</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Date</label>
+          <input v-model="eventForm.event_date" class="form-input" placeholder="e.g. 1920 or 1920-04-01" />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Title</label>
+          <input v-model="eventForm.title" class="form-input" placeholder="e.g. 1920 US Census — Cook County, IL" />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Place</label>
+          <input v-model="eventForm.event_place" class="form-input" placeholder="City, State, Country" />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Description</label>
+          <textarea v-model="eventForm.description" class="form-input resize-none" rows="2" placeholder="Optional details…"></textarea>
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Source / Citation</label>
+          <input v-model="eventForm.source_citation" class="form-input" placeholder="Book title, URL, archive reference…" />
+        </div>
+      </div>
+
+      <!-- Participant multi-select (only on create; editing shows existing participants on the card) -->
+      <div v-if="!isEditingEvent" class="border-t border-slate-100 pt-4">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-xs font-bold uppercase tracking-widest text-slate-500">Link Participants</h4>
+          <span class="text-xs text-slate-400">{{ selectedParticipantIds.length }} selected</span>
+        </div>
+
+        <!-- Participant search -->
+        <div class="relative mb-3">
+          <svg class="absolute left-2.5 top-2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+          <input
+            v-model="participantSearch"
+            type="text"
+            placeholder="Filter people…"
+            class="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg bg-slate-100 border border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+          />
+        </div>
+
+        <!-- Scrollable people list with checkboxes -->
+        <div class="max-h-48 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+          <label
+            v-for="person in filteredParticipants"
+            :key="person.person_id"
+            class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-indigo-50 transition-colors"
+          >
+            <input
+              type="checkbox"
+              :value="person.person_id"
+              v-model="selectedParticipantIds"
+              @change="onParticipantToggle(person.person_id)"
+              class="w-4 h-4 rounded text-indigo-600"
+            />
+            <div :class="['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0', avatarColor(person)]">
+              {{ initials(person) }}
+            </div>
+            <span class="text-sm text-slate-700 flex-1 truncate">{{ fullName(person) }}</span>
+            <!-- Per-participant role selector (visible when checked) -->
+            <select
+              v-if="selectedParticipantIds.includes(person.person_id)"
+              v-model="participantRoles[person.person_id]"
+              class="text-xs border border-slate-200 rounded-lg px-2 py-1 text-slate-600 bg-white focus:outline-none shrink-0"
+              @click.stop
+            >
+              <option value="subject">subject</option>
+              <option value="spouse">spouse</option>
+              <option value="child">child</option>
+              <option value="parent">parent</option>
+              <option value="witness">witness</option>
+              <option value="informant">informant</option>
+              <option value="participant">participant</option>
+            </select>
+          </label>
+          <div v-if="filteredParticipants.length === 0"
+               class="px-4 py-4 text-sm text-slate-400 text-center">No people match your search.</div>
+        </div>
+      </div>
+
+      <!-- Edit mode note -->
+      <div v-else class="border-t border-slate-100 pt-4 text-xs text-slate-400 italic">
+        To manage participants on an existing event, use the Link / × buttons on the event card.
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button @click="showEventModal = false" class="btn-secondary">Cancel</button>
+      <button @click="saveEvent()" :disabled="isSaving" class="btn-primary">
+        {{ isSaving ? 'Saving…' : (isEditingEvent ? 'Save Changes' : 'Create Event') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast notification ──────────────────────────────────────────────────── -->
+<transition name="toast">
+  <div
+    v-if="notification"
+    :class="[
+      'fixed bottom-6 right-6 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-medium z-50 pointer-events-none',
+      notification.type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'
+    ]"
+  >
+    <svg v-if="notification.type === 'error'" class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <svg v-else class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+    </svg>
+    {{ notification.message }}
+  </div>
+</transition>
+
+</div><!-- /#app -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCRIPT
+════════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ─── google.script.run Promise wrapper ───────────────────────────────────────
+//
+// Wraps the GAS client API in a Promise so Vue async/await methods work
+// cleanly. The server always returns { ok: true|false, ... } — a resolved
+// response with ok:false is re-thrown as an Error so callers use try/catch.
+
+function callServer(action, data) {
+  data = data || {};
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.ok === false) {
+          reject(new Error(result.error || 'Server returned an error.'));
+        } else {
+          resolve(result);
+        }
+      })
+      .withFailureHandler(function(err) {
+        reject(new Error((err && err.message) || 'Unknown server error.'));
+      })
+      .execute({ action: action, data: data });
+  });
+}
+
+// ─── Vue 3 app ────────────────────────────────────────────────────────────────
+
+const { createApp } = Vue;
+
+createApp({
+
+  // ── Reactive state ───────────────────────────────────────────────────────
+
+  data() {
+    return {
+      // App chrome
+      currentView: 'profile',
+      notification: null,
+      isLoading: false,
+      isSaving: false,
+
+      // Sidebar
+      searchQuery: '',
+      peopleList: [],
+
+      // Active person + resolved pedigree
+      activePerson: null,
+      pedigreePayload: null,
+      isPedigreeLoading: false,
+
+      // Currently focused family unit (set when a union card is clicked in Profile)
+      currentFamily: null,
+
+      // All events in the system — loaded once and refreshed after writes
+      sharedEvents: [],
+
+      // Person modal
+      showPersonModal: false,
+      isEditingPerson: false,
+      personForm: {
+        person_id: '', first_name: '', middle_name: '', last_name: '',
+        sex: '', birth_date: '', birth_place: '', death_date: '',
+        death_place: '', is_living: true, notes: '',
+      },
+
+      // Family modal
+      showFamilyModal: false,
+      familyModalMode: 'parents', // 'parents' | 'spouses'
+      familyForm: {
+        spouse1_id: '', spouse2_id: '', union_type: 'married',
+        union_date: '', union_place: '', relationship_type: 'biological',
+      },
+
+      // Event modal
+      showEventModal: false,
+      isEditingEvent: false,
+      eventForm: {
+        event_id: '', event_type: 'census', event_date: '', event_place: '',
+        title: '', description: '', source_citation: '',
+      },
+      selectedParticipantIds: [],
+      participantRoles: {},  // { [person_id]: role string }
+      participantSearch: '',
+
+      // Inline participant add state per event: { [event_id]: { personId, role } }
+      inlineAdd: {},
+
+      // D3 zoom handle — stored so toolbar buttons can programmatically zoom
+      _d3Zoom: null,
+    };
+  },
+
+  // ── Computed ─────────────────────────────────────────────────────────────
+
+  computed: {
+    filteredPeople() {
+      const q = this.searchQuery.toLowerCase().trim();
+      if (!q) return this.peopleList;
+      return this.peopleList.filter(p =>
+        this.fullName(p).toLowerCase().includes(q)
+      );
+    },
+
+    filteredParticipants() {
+      const q = this.participantSearch.toLowerCase().trim();
+      if (!q) return this.peopleList;
+      return this.peopleList.filter(p =>
+        this.fullName(p).toLowerCase().includes(q)
+      );
+    },
+  },
+
+  // ── Methods ───────────────────────────────────────────────────────────────
+
+  methods: {
+
+    // ── Display helpers ────────────────────────────────────────────────────
+
+    fullName(person) {
+      if (!person) return '';
+      return [person.first_name, person.middle_name, person.last_name]
+        .filter(Boolean).join(' ');
+    },
+
+    initials(person) {
+      if (!person) return '?';
+      const f = (person.first_name || '').charAt(0).toUpperCase();
+      const l = (person.last_name  || '').charAt(0).toUpperCase();
+      return (f + l) || '?';
+    },
+
+    // Deterministic color from person_id so the same person always has the same avatar color
+    avatarColor(person) {
+      const palette = [
+        'bg-violet-200 text-violet-800',
+        'bg-indigo-200 text-indigo-800',
+        'bg-sky-200 text-sky-800',
+        'bg-teal-200 text-teal-800',
+        'bg-emerald-200 text-emerald-800',
+        'bg-amber-200 text-amber-800',
+        'bg-rose-200 text-rose-800',
+        'bg-pink-200 text-pink-800',
+      ];
+      if (!person || !person.person_id) return palette[0];
+      const n = String(person.person_id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+      return palette[n % palette.length];
+    },
+
+    sexLabel(sex) {
+      return { M: 'Male', F: 'Female' }[sex] || 'Unknown';
+    },
+
+    sexBadgeClass(sex) {
+      const map = {
+        M: 'bg-sky-100 text-sky-700',
+        F: 'bg-rose-100 text-rose-700',
+      };
+      return 'text-xs font-semibold px-2.5 py-0.5 rounded-full ' + (map[sex] || 'bg-slate-100 text-slate-600');
+    },
+
+    relBadgeClass(type) {
+      const map = {
+        biological: 'bg-emerald-100 text-emerald-700',
+        adopted:    'bg-violet-100 text-violet-700',
+        step:       'bg-amber-100 text-amber-700',
+        foster:     'bg-cyan-100 text-cyan-700',
+      };
+      return map[type] || 'bg-slate-100 text-slate-600';
+    },
+
+    eventTypeBadgeClass(type) {
+      const map = {
+        birth:       'bg-emerald-100 text-emerald-700',
+        death:       'bg-slate-200 text-slate-600',
+        marriage:    'bg-rose-100 text-rose-700',
+        census:      'bg-indigo-100 text-indigo-700',
+        immigration: 'bg-sky-100 text-sky-700',
+        military:    'bg-amber-100 text-amber-700',
+        graduation:  'bg-violet-100 text-violet-700',
+        residence:   'bg-teal-100 text-teal-700',
+        other:       'bg-slate-100 text-slate-600',
+      };
+      return map[type] || map.other;
+    },
+
+    capitalise(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    },
+
+    // ── Notification ───────────────────────────────────────────────────────
+
+    notify(message, type) {
+      this.notification = { message: message, type: type || 'success' };
+      var self = this;
+      setTimeout(function() { self.notification = null; }, 3500);
+    },
+
+    // ── People ─────────────────────────────────────────────────────────────
+
+    // Named alias matching the prompt contract.
+    // Fetches the full pedigree payload for a person and updates all reactive state.
+    async fetchPersonData(personId) {
+      return this.selectPerson(personId);
+    },
+
+    async loadPeople() {
+      this.isLoading = true;
+      try {
+        const result = await callServer('listPeople');
+        this.peopleList = result.data || [];
+        // Rebuild inlineAdd slots for all events after a people refresh
+        this._rebuildInlineAdd();
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // Loads all events from the system into sharedEvents (used by Event Manager
+    // and any component that needs a global event list, not per-person).
+    async loadSharedEvents() {
+      try {
+        const result = await callServer('listEvents');
+        this.sharedEvents = result.data || [];
+      } catch (e) {
+        // Non-fatal — sharedEvents stays empty; per-person events via pedigreePayload still work
+        console.warn('loadSharedEvents:', e.message);
+      }
+    },
+
+    async selectPerson(personId) {
+      // Immediately show basic data from the list so the header renders instantly
+      this.activePerson = this.peopleList.find(p => p.person_id === personId) || null;
+      this.pedigreePayload = null;
+      this.currentFamily = null;   // clear focused family when navigating
+      this.currentView = 'profile';
+      this.isPedigreeLoading = true;
+      try {
+        const payload = await callServer('getPedigreePayload', { person_id: personId });
+        this.pedigreePayload = payload;
+        this._rebuildInlineAdd();
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isPedigreeLoading = false;
+      }
+    },
+
+    openPersonModal(person) {
+      this.isEditingPerson = !!person;
+      if (person) {
+        this.personForm = Object.assign({}, person);
+        // Normalise the boolean that may come back from Sheets as the string "TRUE"
+        this.personForm.is_living = (person.is_living === true || person.is_living === 'TRUE');
+      } else {
+        this.personForm = {
+          person_id: '', first_name: '', middle_name: '', last_name: '',
+          sex: '', birth_date: '', birth_place: '', death_date: '',
+          death_place: '', is_living: true, notes: '',
+        };
+      }
+      this.showPersonModal = true;
+    },
+
+    async savePerson() {
+      this.isSaving = true;
+      try {
+        const result = await callServer('savePerson', this.personForm);
+        this.notify(this.isEditingPerson ? 'Person updated.' : 'Person added.');
+        this.showPersonModal = false;
+        await this.loadPeople();
+        await this.selectPerson(result.person_id);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async confirmDeletePerson(personId) {
+      if (!confirm('Delete this person and all their family/event links? This cannot be undone.')) return;
+      try {
+        await callServer('deletePerson', { person_id: personId });
+        this.notify('Person deleted.');
+        this.activePerson = null;
+        this.pedigreePayload = null;
+        await this.loadPeople();
+      } catch (e) {
+        this.notify(e.message, 'error');
+      }
+    },
+
+    // ── Families ───────────────────────────────────────────────────────────
+
+    openFamilyModal(mode) {
+      this.familyModalMode = mode;
+      this.familyForm = {
+        spouse1_id: mode === 'spouses' ? (this.activePerson ? this.activePerson.person_id : '') : '',
+        spouse2_id: '',
+        union_type: 'married',
+        union_date: '',
+        union_place: '',
+        relationship_type: 'biological',
+      };
+      this.showFamilyModal = true;
+    },
+
+    async saveFamily() {
+      this.isSaving = true;
+      try {
+        const payload = {
+          spouse1_id: this.familyForm.spouse1_id,
+          spouse2_id: this.familyForm.spouse2_id,
+          union_type: this.familyForm.union_type,
+          union_date: this.familyForm.union_date,
+          union_place: this.familyForm.union_place,
+        };
+        const result = await callServer('saveFamily', payload);
+
+        // In 'parents' mode, also register activePerson as a child of this new family
+        if (this.familyModalMode === 'parents' && this.activePerson) {
+          await callServer('addChild', {
+            family_id: result.family_id,
+            child_id: this.activePerson.person_id,
+            relationship_type: this.familyForm.relationship_type || 'biological',
+          });
+        }
+
+        this.notify('Family saved.');
+        this.showFamilyModal = false;
+        if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    // ── Events ─────────────────────────────────────────────────────────────
+
+    openEventModal(event) {
+      this.isEditingEvent = !!event;
+      this.participantSearch = '';
+
+      if (event) {
+        this.eventForm = Object.assign({}, event);
+        // Pre-populate participants (active person + co-participants)
+        const coIds = (event.co_participants || []).map(cp => cp.person.person_id);
+        this.selectedParticipantIds = this.activePerson
+          ? [this.activePerson.person_id].concat(coIds)
+          : coIds;
+        const roles = {};
+        if (this.activePerson) roles[this.activePerson.person_id] = event.role;
+        (event.co_participants || []).forEach(cp => { roles[cp.person.person_id] = cp.role; });
+        this.participantRoles = roles;
+      } else {
+        this.eventForm = {
+          event_id: '', event_type: 'census', event_date: '', event_place: '',
+          title: '', description: '', source_citation: '',
+        };
+        // Pre-check the active person as 'subject'
+        if (this.activePerson) {
+          this.selectedParticipantIds = [this.activePerson.person_id];
+          this.participantRoles = {};
+          this.participantRoles[this.activePerson.person_id] = 'subject';
+        } else {
+          this.selectedParticipantIds = [];
+          this.participantRoles = {};
+        }
+      }
+
+      this.showEventModal = true;
+    },
+
+    // Sets a default role when a participant is checked for the first time
+    onParticipantToggle(personId) {
+      if (
+        this.selectedParticipantIds.includes(personId) &&
+        !this.participantRoles[personId]
+      ) {
+        this.participantRoles[personId] =
+          (this.activePerson && personId === this.activePerson.person_id)
+            ? 'subject'
+            : 'participant';
+      }
+    },
+
+    async saveEvent() {
+      this.isSaving = true;
+      try {
+        const result = await callServer('saveEvent', this.eventForm);
+        const eventId = result.event_id;
+
+        if (!this.isEditingEvent) {
+          // Link each selected participant sequentially (avoids lock contention)
+          for (const personId of this.selectedParticipantIds) {
+            await callServer('addEventParticipant', {
+              event_id: eventId,
+              person_id: personId,
+              role: this.participantRoles[personId] || 'participant',
+            });
+          }
+        }
+
+        this.notify(this.isEditingEvent ? 'Event updated.' : 'Event created.');
+        this.showEventModal = false;
+        await Promise.all([
+          this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
+          this.loadSharedEvents(),
+        ]);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    async unlinkParticipant(eventId, personId) {
+      try {
+        await callServer('removeEventParticipant', { event_id: eventId, person_id: personId });
+        this.notify('Participant removed.');
+        await Promise.all([
+          this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
+          this.loadSharedEvents(),
+        ]);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      }
+    },
+
+    // ── Inline participant link (on existing event cards) ──────────────────
+
+    peopleNotInEvent(event) {
+      const inEvent = new Set();
+      if (this.activePerson) inEvent.add(this.activePerson.person_id);
+      (event.co_participants || []).forEach(cp => inEvent.add(cp.person.person_id));
+      return this.peopleList.filter(p => !inEvent.has(p.person_id));
+    },
+
+    async linkParticipantInline(eventId) {
+      const state = this.inlineAdd[eventId];
+      if (!state || !state.personId) return;
+      try {
+        await callServer('addEventParticipant', {
+          event_id: eventId,
+          person_id: state.personId,
+          role: state.role || 'participant',
+        });
+        this.notify('Participant linked.');
+        state.personId = '';
+        state.role = 'participant';
+        await Promise.all([
+          this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
+          this.loadSharedEvents(),
+        ]);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      }
+    },
+
+    // ── D3 Pedigree Tree ───────────────────────────────────────────────────
+    //
+    // Rendering strategy:
+    //   • Vue owns the <svg ref="treeSvg"> element (creates / destroys it).
+    //   • D3 owns *everything inside* that SVG — it clears and redraws on each call.
+    //   • Click events on D3 nodes call this.selectPerson() via a closure over
+    //     `this`, which triggers the Vue watcher and redraws the tree reactively.
+
+    drawTree() {
+      const payload = this.pedigreePayload;
+      if (!payload || !payload.person) return;
+
+      const svgEl = this.$refs.treeSvg;
+      if (!svgEl) return;
+
+      // ── Layout constants ────────────────────────────────────────────────
+      const NW   = 184;   // node width
+      const NH   = 70;    // node height
+      const HDR  = 26;    // colored header band height
+      const RX   = 10;    // corner radius
+      const HG   = 30;    // horizontal gap between nodes in the same row
+      const VG   = 148;   // vertical distance between tier *centres*
+
+      // ── Build node data from pedigreePayload ────────────────────────────
+
+      // Subject
+      const subject = { ...payload.person, _role: 'subject' };
+
+      // Parents: deduplicated by person_id
+      const parentMap = new Map();
+      (payload.parents || []).forEach(p => {
+        if (!parentMap.has(p.person.person_id)) {
+          parentMap.set(p.person.person_id, {
+            ...p.person, _role: 'parent',
+            _relType: p.relationship_type,
+            _familyId: p.family_id,
+          });
+        }
+      });
+      const parents = [...parentMap.values()];
+
+      // Spouses (one per union — null spouses filtered out)
+      const spouses = (payload.spouses || [])
+        .filter(s => s.spouse)
+        .map((s, i) => ({ ...s.spouse, _role: 'spouse', _family: s.family, _fi: i }));
+
+      // Children: deduplicated; each carries which family-index they belong to
+      const childMap = new Map();
+      (payload.spouses || []).forEach((s, fi) => {
+        (s.children || []).forEach(c => {
+          if (!childMap.has(c.person.person_id)) {
+            childMap.set(c.person.person_id, {
+              ...c.person, _role: 'child',
+              _relType: c.relationship_type, _fi: fi,
+            });
+          }
+        });
+      });
+      const children = [...childMap.values()];
+
+      // ── Assign (x, y) centre positions ──────────────────────────────────
+
+      // Row 1: subject + spouses side-by-side
+      const row1 = [subject, ...spouses];
+      const row1W = row1.length * NW + (row1.length - 1) * HG;
+      row1.forEach((n, i) => {
+        n._x = -row1W / 2 + i * (NW + HG) + NW / 2;
+        n._y = 0;
+      });
+
+      // Row 0: parents, centred above subject
+      if (parents.length > 0) {
+        const pw = parents.length * NW + (parents.length - 1) * HG;
+        parents.forEach((p, i) => {
+          p._x = subject._x - pw / 2 + i * (NW + HG) + NW / 2;
+          p._y = -VG;
+        });
+      }
+
+      // Row 2: children, spread below the midpoint of subject ↔ first spouse
+      const unionAnchorX = spouses.length > 0
+        ? (subject._x + spouses[0]._x) / 2
+        : subject._x;
+
+      if (children.length > 0) {
+        const cw = children.length * NW + (children.length - 1) * HG;
+        children.forEach((c, i) => {
+          c._x = unionAnchorX - cw / 2 + i * (NW + HG) + NW / 2;
+          c._y = VG;
+        });
+      }
+
+      const allNodes = [subject, ...spouses, ...parents, ...children];
+
+      // ── SVG setup ────────────────────────────────────────────────────────
+      const W = svgEl.clientWidth  || 900;
+      const H = svgEl.clientHeight || 540;
+
+      // Clear everything — D3 takes full ownership of SVG internals
+      const svg = d3.select(svgEl).attr('width', W).attr('height', H);
+      svg.selectAll('*').remove();
+
+      // Defs: drop-shadow filter
+      const defs = svg.append('defs');
+      const flt = defs.append('filter')
+        .attr('id', 'node-shadow').attr('x', '-20%').attr('y', '-20%')
+        .attr('width', '140%').attr('height', '140%');
+      flt.append('feDropShadow')
+        .attr('dx', 0).attr('dy', 2).attr('stdDeviation', 3.5)
+        .attr('flood-color', '#1e293b').attr('flood-opacity', 0.09);
+
+      // Root group — receives the D3 zoom transform
+      const root = svg.append('g').attr('class', 'tree-root');
+
+      // ── Zoom & pan ───────────────────────────────────────────────────────
+      const zoomBehavior = d3.zoom()
+        .scaleExtent([0.2, 3.5])
+        .on('zoom', (event) => root.attr('transform', event.transform));
+
+      svg.call(zoomBehavior);
+
+      // Store so toolbar buttons can call zoomBehavior programmatically
+      this._d3Zoom = { svg, behavior: zoomBehavior };
+
+      // Centre the tree in the viewport on first draw
+      svg.call(
+        zoomBehavior.transform,
+        d3.zoomIdentity.translate(W / 2, H / 2)
+      );
+
+      // ── Helper: cubic bezier elbow ───────────────────────────────────────
+      function elbow(x1, y1, x2, y2) {
+        const my = (y1 + y2) / 2;
+        return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+      }
+
+      // ── Draw links (behind nodes) ────────────────────────────────────────
+      const linksG = root.append('g').attr('class', 'links');
+
+      const LINK_COLOR = '#94a3b8';
+
+      // 1. Parent → Subject: curved elbow
+      parents.forEach(p => {
+        linksG.append('path')
+          .attr('d', elbow(p._x, p._y + NH / 2, subject._x, subject._y - NH / 2))
+          .attr('fill', 'none')
+          .attr('stroke', LINK_COLOR)
+          .attr('stroke-width', 1.5);
+      });
+
+      // 2. Couple line between parent pairs from the same family
+      const famGroups = {};
+      (payload.parents || []).forEach(p => {
+        const fid = p.family_id || '__solo__';
+        if (!famGroups[fid]) famGroups[fid] = [];
+        const node = parentMap.get(p.person.person_id);
+        if (node) famGroups[fid].push(node);
+      });
+      Object.values(famGroups).forEach(grp => {
+        if (grp.length < 2) return;
+        const [a, b] = [...grp].sort((x, y) => x._x - y._x);
+        const lx1 = a._x + NW / 2, lx2 = b._x - NW / 2, ly = a._y;
+        linksG.append('line')
+          .attr('x1', lx1).attr('y1', ly).attr('x2', lx2).attr('y2', ly)
+          .attr('stroke', LINK_COLOR).attr('stroke-width', 2);
+        linksG.append('circle')
+          .attr('cx', (lx1 + lx2) / 2).attr('cy', ly).attr('r', 5)
+          .attr('fill', '#fff').attr('stroke', LINK_COLOR).attr('stroke-width', 2);
+      });
+
+      // 3. Union lines: subject ↔ each spouse (dashed indigo, ring in middle)
+      spouses.forEach(sp => {
+        const x1 = subject._x + NW / 2, x2 = sp._x - NW / 2;
+        const ly = subject._y; // both on same row
+        linksG.append('line')
+          .attr('x1', x1).attr('y1', ly).attr('x2', x2).attr('y2', ly)
+          .attr('stroke', '#818cf8').attr('stroke-width', 2.5)
+          .attr('stroke-dasharray', '6 3');
+        const midX = (x1 + x2) / 2;
+        linksG.append('circle')
+          .attr('cx', midX).attr('cy', ly).attr('r', 6)
+          .attr('fill', '#fff').attr('stroke', '#818cf8').attr('stroke-width', 2);
+        linksG.append('text')
+          .attr('x', midX).attr('y', ly)
+          .attr('dominant-baseline', 'middle').attr('text-anchor', 'middle')
+          .attr('font-size', '8px').attr('fill', '#818cf8').text('♥');
+      });
+
+      // 4. Drop lines from union anchor to children
+      //    Vertical stem → horizontal bar → short verticals to each child top
+      if (children.length > 0) {
+        const stemTopY  = subject._y + NH / 2;
+        const barY      = subject._y + VG / 2;         // halfway between rows
+        const childTopY = children[0]._y - NH / 2;
+
+        // Vertical stem down from union midpoint
+        linksG.append('line')
+          .attr('x1', unionAnchorX).attr('y1', stemTopY)
+          .attr('x2', unionAnchorX).attr('y2', barY)
+          .attr('stroke', LINK_COLOR).attr('stroke-width', 1.5);
+
+        if (children.length > 1) {
+          // Horizontal bar spanning all children
+          linksG.append('line')
+            .attr('x1', children[0]._x).attr('y1', barY)
+            .attr('x2', children[children.length - 1]._x).attr('y2', barY)
+            .attr('stroke', LINK_COLOR).attr('stroke-width', 1.5);
+        }
+
+        // Short verticals from bar down to each child top
+        children.forEach(c => {
+          // If only one child, draw straight from stem
+          const barX = children.length === 1 ? unionAnchorX : c._x;
+          linksG.append('line')
+            .attr('x1', barX).attr('y1', barY)
+            .attr('x2', c._x).attr('y2', childTopY)
+            .attr('stroke', LINK_COLOR).attr('stroke-width', 1.5);
+        });
+      }
+
+      // ── Draw nodes ───────────────────────────────────────────────────────
+      const nodesG = root.append('g').attr('class', 'nodes');
+
+      // Capture Vue context for click handlers (arrow fn keeps `this`)
+      const vueThis = this;
+
+      const nodeGs = nodesG.selectAll('g.node')
+        .data(allNodes)
+        .enter()
+        .append('g')
+        .attr('class', 'node')
+        // Translate so (0,0) of each group is the top-left of the node card
+        .attr('transform', d => `translate(${d._x - NW / 2},${d._y - NH / 2})`)
+        .style('cursor', d => (d.person_id && d._role !== 'subject') ? 'pointer' : 'default')
+        .on('click', function(event, d) {
+          event.stopPropagation();
+          // Clicking the subject re-centres; clicking any other node navigates to them
+          if (!d.person_id) return;
+          if (d._role === 'subject') {
+            vueThis.zoomReset();
+          } else {
+            vueThis.selectPerson(d.person_id);
+          }
+        });
+
+      // ── Card background (drop shadow) ──────────────────────────────────
+      nodeGs.append('rect')
+        .attr('width', NW).attr('height', NH).attr('rx', RX)
+        .attr('fill', '#fff')
+        .attr('filter', 'url(#node-shadow)')
+        .attr('stroke', d => d._role === 'subject' ? '#4f46e5' : '#e2e8f0')
+        .attr('stroke-width', d => d._role === 'subject' ? 2.5 : 1);
+
+      // ── Coloured header band (sex-based) ──────────────────────────────
+      const headerFill = { M: '#e0e7ff', F: '#fce7f3' };
+      const headerText = { M: '#3730a3', F: '#9d174d' };
+
+      nodeGs.append('rect')
+        .attr('width', NW).attr('height', HDR).attr('rx', RX)
+        .attr('fill', d => headerFill[d.sex] || '#f1f5f9');
+
+      // Straight-bottomed rect to square off the lower corners of the header
+      nodeGs.append('rect')
+        .attr('y', HDR - RX).attr('width', NW).attr('height', RX)
+        .attr('fill', d => headerFill[d.sex] || '#f1f5f9');
+
+      // ── Name in header ────────────────────────────────────────────────
+      nodeGs.append('text')
+        .attr('x', 10).attr('y', HDR / 2)
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', '12px').attr('font-weight', '700')
+        .attr('font-family', 'Inter, system-ui, sans-serif')
+        .attr('fill', d => headerText[d.sex] || '#334155')
+        .text(d => {
+          const n = [d.first_name, d.last_name].filter(Boolean).join(' ');
+          return n.length > 20 ? n.slice(0, 18) + '…' : n;
+        });
+
+      // ── Star on subject node ──────────────────────────────────────────
+      nodeGs.filter(d => d._role === 'subject')
+        .append('text')
+        .attr('x', NW - 10).attr('y', HDR / 2)
+        .attr('dominant-baseline', 'middle').attr('text-anchor', 'middle')
+        .attr('font-size', '11px').attr('fill', '#4f46e5')
+        .text('★');
+
+      // ── Dates in card body ────────────────────────────────────────────
+      nodeGs.append('text')
+        .attr('x', 10).attr('y', HDR + (NH - HDR) / 2)
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', '10.5px').attr('font-family', 'Inter, system-ui, sans-serif')
+        .attr('fill', '#64748b')
+        .text(d => {
+          const b = d.birth_date || '?';
+          const living = d.is_living === true || d.is_living === 'TRUE';
+          if (living) return `b. ${b}  ·  living`;
+          const de = d.death_date;
+          return de ? `${b} – ${de}` : `b. ${b}`;
+        });
+
+      // ── Relationship type badge (bottom-right of card body) ───────────
+      nodeGs.filter(d => d._relType)
+        .append('text')
+        .attr('x', NW - 8).attr('y', NH - 7)
+        .attr('dominant-baseline', 'ideographic').attr('text-anchor', 'end')
+        .attr('font-size', '9px').attr('font-family', 'Inter, system-ui, sans-serif')
+        .attr('fill', '#94a3b8')
+        .text(d => d._relType ? d._relType.slice(0, 4) + '.' : '');
+
+      // ── Hover highlight (only on non-subject nodes) ───────────────────
+      nodeGs.filter(d => d._role !== 'subject')
+        .on('mouseenter', function() {
+          d3.select(this).select('rect').attr('stroke', '#818cf8').attr('stroke-width', 2);
+        })
+        .on('mouseleave', function(event, d) {
+          d3.select(this).select('rect')
+            .attr('stroke', '#e2e8f0').attr('stroke-width', 1);
+        });
+    },
+
+    // ── Toolbar zoom controls ──────────────────────────────────────────────
+    zoomIn() {
+      if (!this._d3Zoom) return;
+      this._d3Zoom.svg.transition().duration(250)
+        .call(this._d3Zoom.behavior.scaleBy, 1.45);
+    },
+    zoomOut() {
+      if (!this._d3Zoom) return;
+      this._d3Zoom.svg.transition().duration(250)
+        .call(this._d3Zoom.behavior.scaleBy, 1 / 1.45);
+    },
+    zoomReset() {
+      if (!this._d3Zoom) return;
+      const svgEl = this.$refs.treeSvg;
+      if (!svgEl) return;
+      const W = svgEl.clientWidth  || 900;
+      const H = svgEl.clientHeight || 540;
+      this._d3Zoom.svg.transition().duration(350).call(
+        this._d3Zoom.behavior.transform,
+        d3.zoomIdentity.translate(W / 2, H / 2)
+      );
+    },
+
+    // Ensures every event in the current pedigreePayload has a slot in inlineAdd
+    _rebuildInlineAdd() {
+      if (!this.pedigreePayload || !this.pedigreePayload.events) return;
+      this.pedigreePayload.events.forEach(event => {
+        if (!this.inlineAdd[event.event_id]) {
+          this.inlineAdd[event.event_id] = { personId: '', role: 'participant' };
+        }
+      });
+    },
+  },
+
+  // ── Watchers ──────────────────────────────────────────────────────────────
+  //
+  // The tree tab can become active in two ways:
+  //   (a) user switches to Tree tab while pedigreePayload is already loaded
+  //   (b) pedigreePayload arrives (from selectPerson) while Tree tab is active
+  //
+  // Both watchers call drawTree via $nextTick so the SVG element is guaranteed
+  // to be in the DOM before D3 tries to select it.
+
+  watch: {
+    currentView(newView) {
+      if (newView === 'tree' && this.pedigreePayload) {
+        this.$nextTick(() => this.drawTree());
+      }
+    },
+    pedigreePayload(newPayload) {
+      if (newPayload && this.currentView === 'tree') {
+        this.$nextTick(() => this.drawTree());
+      }
+    },
+  },
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  mounted() {
+    this.loadPeople();
+    this.loadSharedEvents();
+  },
+
+}).mount('#app');
+</script>
+</body>
+</html>
