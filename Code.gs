@@ -74,7 +74,7 @@ function _jsonOut(obj) {
 //  or internally by doGet/doPost.
 
 function execute(payload) {
-  return route(payload);
+  return _sanitizeForClient(route(payload));
 }
 
 function route(payload) {
@@ -119,6 +119,27 @@ function _ss() {
 
 function _sheet(name) {
   return _ss().getSheetByName(name);
+}
+
+/**
+ * Converts server values into shapes that google.script.run can reliably
+ * marshal back to the browser. In particular, Sheet date cells become JS Date
+ * objects when read via getValues(), and those are not safe to return directly.
+ */
+function _sanitizeForClient(value) {
+  if (value === undefined || value === null) return null;
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return value.toISOString();
+  }
+  if (Array.isArray(value)) {
+    return value.map(_sanitizeForClient);
+  }
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, _sanitizeForClient(item)])
+    );
+  }
+  return value;
 }
 
 /**
