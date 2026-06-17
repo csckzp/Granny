@@ -46,6 +46,7 @@ function doGet(e) {
   // Action param present → treat as a read-only API call (GET = reads only)
   const READ_ACTIONS = new Set([
     'getPerson', 'listPeople', 'getPedigreePayload', 'listEvents',
+    'listFamilies', 'listFamilyChildren', 'listEventParticipants',
   ]);
   if (!READ_ACTIONS.has(action)) {
     return _jsonOut({ ok: false, error: 'Use POST for write operations.' });
@@ -89,10 +90,12 @@ function route(payload) {
       case 'deletePerson':            return deletePerson(data.person_id);
 
       // Families
+      case 'listFamilies':            return listFamilies();
       case 'saveFamily':              return saveFamily(data);
       case 'deleteFamily':            return deleteFamily(data.family_id);
 
       // Family_Children junction
+      case 'listFamilyChildren':      return listFamilyChildren();
       case 'addChild':                return addFamilyChild(data);
       case 'removeChild':             return removeFamilyChild(data);
 
@@ -100,6 +103,7 @@ function route(payload) {
       case 'listEvents':              return listEvents();
       case 'saveEvent':               return saveEvent(data);
       case 'deleteEvent':             return deleteEvent(data.event_id);
+      case 'listEventParticipants':   return listEventParticipants();
       case 'addEventParticipant':     return addEventParticipant(data);
       case 'removeEventParticipant':  return removeEventParticipant(data);
 
@@ -404,6 +408,10 @@ function deletePerson(personId) {
 
 // ─── Families CRUD ────────────────────────────────────────────────────────────
 
+function listFamilies() {
+  return { ok: true, data: _toObjects(_sheet(SHEETS.FAMILIES)) };
+}
+
 function saveFamily(data) {
   _requireRole('admin', 'editor');
   const lock = _acquireLock();
@@ -450,6 +458,10 @@ function deleteFamily(familyId) {
 }
 
 // ─── Family_Children junction ─────────────────────────────────────────────────
+
+function listFamilyChildren() {
+  return { ok: true, data: _toObjects(_sheet(SHEETS.FAMILY_CHILDREN)) };
+}
 
 function addFamilyChild(data) {
   _requireRole('admin', 'editor');
@@ -548,6 +560,10 @@ function deleteEvent(eventId) {
 }
 
 // ─── Event_Participants junction ──────────────────────────────────────────────
+
+function listEventParticipants() {
+  return { ok: true, data: _toObjects(_sheet(SHEETS.EVENT_PARTICIPANTS)) };
+}
 
 function addEventParticipant(data) {
   _requireRole('admin', 'editor');

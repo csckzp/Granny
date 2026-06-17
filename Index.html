@@ -149,6 +149,15 @@
       </svg>
       <span class="font-bold tracking-tight text-lg">Granny</span>
     </div>
+    <nav class="flex items-center gap-1 bg-indigo-800/60 rounded-lg p-1">
+      <button
+        v-for="sec in ['people', 'families', 'events']"
+        :key="sec"
+        @click="activeSection = sec"
+        :class="['text-xs font-semibold px-3 py-1.5 rounded-md capitalize transition-colors',
+          activeSection === sec ? 'bg-white text-indigo-700' : 'text-indigo-200 hover:text-white']"
+      >{{ sec }}</button>
+    </nav>
     <span class="text-xs text-indigo-300 font-medium hidden sm:block">Family History Manager</span>
   </header>
 
@@ -158,67 +167,143 @@
     <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
     <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
 
-      <!-- Search -->
-      <div class="p-4 border-b border-slate-100">
-        <div class="relative">
-          <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
-          </svg>
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search people…"
-            class="w-full pl-9 pr-9 py-2 rounded-lg bg-slate-100 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">✕</button>
+      <!-- ═══ People sidebar ═══ -->
+      <template v-if="activeSection === 'people'">
+        <!-- Search -->
+        <div class="p-4 border-b border-slate-100">
+          <div class="relative">
+            <svg class="absolute left-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search people…"
+              class="w-full pl-9 pr-9 py-2 rounded-lg bg-slate-100 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+            />
+            <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">✕</button>
+          </div>
         </div>
-      </div>
 
-      <!-- People list -->
-      <div class="flex-1 overflow-y-auto">
-        <div v-if="isLoading" class="p-6 text-center text-slate-400 text-sm">Loading…</div>
-        <div v-else-if="filteredPeople.length === 0" class="p-8 text-center">
-          <p class="text-slate-400 text-sm">{{ searchQuery ? 'No results found.' : 'No people added yet.' }}</p>
-        </div>
-        <ul v-else class="py-1.5">
-          <li
-            v-for="person in filteredPeople"
-            :key="person.person_id"
-            @click="selectPerson(person.person_id)"
-            :class="[
-              'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-l-4',
-              activePerson && activePerson.person_id === person.person_id
-                ? 'bg-indigo-50 border-indigo-500'
-                : 'hover:bg-slate-50 border-transparent'
-            ]"
-          >
-            <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0', avatarColor(person)]">
-              {{ initials(person) }}
-            </div>
-            <div class="min-w-0">
-              <div class="text-sm font-semibold text-slate-800 truncate">{{ fullName(person) }}</div>
-              <div class="text-xs text-slate-400 truncate">
-                {{ person.birth_date || '?' }} –
-                <span v-if="person.is_living === true || person.is_living === 'TRUE'" class="text-green-500">Living</span>
-                <span v-else>{{ person.death_date || '?' }}</span>
+        <!-- People list -->
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="isLoading" class="p-6 text-center text-slate-400 text-sm">Loading…</div>
+          <div v-else-if="filteredPeople.length === 0" class="p-8 text-center">
+            <p class="text-slate-400 text-sm">{{ searchQuery ? 'No results found.' : 'No people added yet.' }}</p>
+          </div>
+          <ul v-else class="py-1.5">
+            <li
+              v-for="person in filteredPeople"
+              :key="person.person_id"
+              @click="selectPerson(person.person_id)"
+              :class="[
+                'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-l-4',
+                activePerson && activePerson.person_id === person.person_id
+                  ? 'bg-indigo-50 border-indigo-500'
+                  : 'hover:bg-slate-50 border-transparent'
+              ]"
+            >
+              <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0', avatarColor(person)]">
+                {{ initials(person) }}
               </div>
-            </div>
-          </li>
-        </ul>
-      </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-800 truncate">{{ fullName(person) }}</div>
+                <div class="text-xs text-slate-400 truncate">
+                  {{ person.birth_date || '?' }} –
+                  <span v-if="person.is_living === true || person.is_living === 'TRUE'" class="text-green-500">Living</span>
+                  <span v-else>{{ person.death_date || '?' }}</span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
 
-      <!-- Add person button -->
-      <div class="p-3 border-t border-slate-100">
-        <button @click="openPersonModal()" class="btn-primary w-full">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          Add Person
-        </button>
-      </div>
+        <!-- Add person button -->
+        <div class="p-3 border-t border-slate-100">
+          <button @click="openPersonModal()" class="btn-primary w-full">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Person
+          </button>
+        </div>
+      </template>
+
+      <!-- ═══ Families sidebar ═══ -->
+      <template v-else-if="activeSection === 'families'">
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="familiesWithDetails.length === 0" class="p-8 text-center">
+            <p class="text-slate-400 text-sm">No unions recorded yet.</p>
+          </div>
+          <ul v-else class="py-1.5">
+            <li
+              v-for="fam in familiesWithDetails"
+              :key="fam.family_id"
+              @click="currentFamily = fam"
+              :class="[
+                'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-l-4',
+                currentFamily && currentFamily.family_id === fam.family_id
+                  ? 'bg-indigo-50 border-indigo-500'
+                  : 'hover:bg-slate-50 border-transparent'
+              ]"
+            >
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-800 truncate">
+                  {{ fam.spouse1 ? fullName(fam.spouse1) : 'Unknown' }} &amp; {{ fam.spouse2 ? fullName(fam.spouse2) : 'Unknown' }}
+                </div>
+                <div class="text-xs text-slate-400 truncate">
+                  {{ capitalise(fam.union_type) || 'Union' }}<span v-if="fam.union_date"> · {{ fam.union_date }}</span>
+                  · {{ fam.children.length }} child{{ fam.children.length === 1 ? '' : 'ren' }}
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="p-3 border-t border-slate-100">
+          <button @click="openFamilyModal('new-union')" class="btn-primary w-full">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Union
+          </button>
+        </div>
+      </template>
+
+      <!-- ═══ Events sidebar ═══ -->
+      <template v-else-if="activeSection === 'events'">
+        <div class="flex-1 overflow-y-auto">
+          <div v-if="eventsWithParticipants.length === 0" class="p-8 text-center">
+            <p class="text-slate-400 text-sm">No events recorded yet.</p>
+          </div>
+          <ul v-else class="py-1.5">
+            <li
+              v-for="ev in eventsWithParticipants"
+              :key="ev.event_id"
+              @click="currentGlobalEventId = ev.event_id"
+              :class="[
+                'flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors border-l-4',
+                currentGlobalEventId === ev.event_id
+                  ? 'bg-indigo-50 border-indigo-500'
+                  : 'hover:bg-slate-50 border-transparent'
+              ]"
+            >
+              <span :class="eventTypeBadgeClass(ev.event_type)" class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0">{{ ev.event_type }}</span>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-slate-800 truncate">{{ ev.title || capitalise(ev.event_type) }}</div>
+                <div class="text-xs text-slate-400 truncate">{{ ev.event_date || '?' }}</div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="p-3 border-t border-slate-100">
+          <button @click="currentGlobalEventId = null; openEventModal()" class="btn-primary w-full">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Event
+          </button>
+        </div>
+      </template>
     </aside>
 
     <!-- ── Main content ───────────────────────────────────────────────────── -->
-    <main :class="['flex-1 bg-slate-100', currentView === 'tree' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto']">
+    <main :class="['flex-1 bg-slate-100', activeSection === 'people' && currentView === 'tree' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto']">
 
+      <template v-if="activeSection === 'people'">
       <!-- Empty state -->
       <div v-if="!activePerson" class="h-full flex flex-col items-center justify-center text-center p-8 select-none">
         <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -393,6 +478,14 @@
                       <span :class="relBadgeClass(child.relationship_type)" class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0">{{ child.relationship_type }}</span>
                     </div>
                   </div>
+                  <!-- Union actions -->
+                  <div class="flex items-center gap-4 px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+                    <button @click="openAddChildModal({ family_id: entry.family.family_id, children: entry.children || [] })" class="btn-ghost text-xs">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                      Add child
+                    </button>
+                    <button @click="openFamilyModal('edit', entry.family)" class="text-xs font-medium text-slate-500 hover:text-slate-700">Edit union</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -435,89 +528,18 @@
 
           <!-- Event cards -->
           <div v-else class="space-y-4">
-            <div v-for="event in pedigreePayload.events" :key="event.event_id" class="card overflow-hidden">
-              <div class="flex items-start gap-4 p-5">
-                <!-- Type pill -->
-                <div class="shrink-0 pt-0.5">
-                  <span :class="eventTypeBadgeClass(event.event_type)" class="text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
-                    {{ event.event_type }}
-                  </span>
-                </div>
-
-                <div class="flex-1 min-w-0">
-                  <div class="text-base font-semibold text-slate-800">{{ event.title || capitalise(event.event_type) }}</div>
-                  <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-sm text-slate-500">
-                    <span v-if="event.event_date">{{ event.event_date }}</span>
-                    <span v-if="event.event_place" class="flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                      {{ event.event_place }}
-                    </span>
-                  </div>
-                  <p v-if="event.description" class="text-sm text-slate-600 mt-1.5">{{ event.description }}</p>
-                  <p v-if="event.source_citation" class="text-xs text-slate-400 mt-1 italic">Source: {{ event.source_citation }}</p>
-
-                  <!-- Roles & participants -->
-                  <div class="mt-3 flex flex-wrap items-center gap-2">
-                    <span class="text-xs text-slate-500">Your role:</span>
-                    <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">{{ event.role }}</span>
-                    <template v-if="event.co_participants && event.co_participants.length">
-                      <span class="text-slate-300">|</span>
-                      <span class="text-xs text-slate-500">Also present:</span>
-                      <span
-                        v-for="cp in event.co_participants"
-                        :key="cp.person.person_id"
-                        class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full"
-                      >
-                        <span class="cursor-pointer hover:text-indigo-600 transition-colors" @click="selectPerson(cp.person.person_id)">
-                          {{ fullName(cp.person) }}
-                        </span>
-                        <span class="text-slate-400">({{ cp.role }})</span>
-                        <button
-                          @click="unlinkParticipant(event.event_id, cp.person.person_id)"
-                          class="text-slate-300 hover:text-red-500 transition-colors font-bold leading-none ml-0.5"
-                          title="Remove participant"
-                        >×</button>
-                      </span>
-                    </template>
-                  </div>
-
-                  <!-- Inline: link an additional participant to this existing event -->
-                  <div class="mt-3 flex items-center gap-2 flex-wrap">
-                    <select
-                      v-model="inlineAdd[event.event_id].personId"
-                      class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                    >
-                      <option value="">+ Link person…</option>
-                      <option
-                        v-for="p in peopleNotInEvent(event)"
-                        :key="p.person_id"
-                        :value="p.person_id"
-                      >{{ fullName(p) }}</option>
-                    </select>
-                    <select
-                      v-if="inlineAdd[event.event_id].personId"
-                      v-model="inlineAdd[event.event_id].role"
-                      class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                    >
-                      <option value="subject">subject</option>
-                      <option value="spouse">spouse</option>
-                      <option value="child">child</option>
-                      <option value="parent">parent</option>
-                      <option value="witness">witness</option>
-                      <option value="informant">informant</option>
-                      <option value="participant">participant</option>
-                    </select>
-                    <button
-                      v-if="inlineAdd[event.event_id].personId"
-                      @click="linkParticipantInline(event.event_id)"
-                      class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-medium"
-                    >Link</button>
-                  </div>
-                </div>
-
-                <button @click="openEventModal(event)" class="btn-secondary text-xs px-2.5 py-1.5 shrink-0">Edit</button>
-              </div>
-            </div>
+            <event-card
+              v-for="event in pedigreePayload.events"
+              :key="event.event_id"
+              :event="{ ...event, viewerRole: event.role, participants: event.co_participants || [] }"
+              mode="person"
+              :exclude-ids="activePerson ? [activePerson.person_id] : []"
+              :people-list="peopleList"
+              @select-person="selectPerson"
+              @edit="openEventModal(event)"
+              @unlink="personId => unlinkParticipant(event.event_id, personId)"
+              @link="(personId, role) => linkParticipantInline(event.event_id, personId, role)"
+            ></event-card>
           </div>
         </div><!-- /events view -->
 
@@ -561,17 +583,132 @@
         </div><!-- /tree view -->
 
       </template>
+      </template><!-- /people section -->
+
+      <!-- ════════════════ FAMILIES VIEW ════════════════ -->
+      <template v-else-if="activeSection === 'families'">
+        <div v-if="!currentFamily" class="h-full flex flex-col items-center justify-center text-center p-8 select-none">
+          <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <h2 class="text-slate-500 font-semibold text-lg">Select a union to begin</h2>
+          <p class="text-slate-400 text-sm mt-1">Choose one from the sidebar, or add a new union.</p>
+        </div>
+
+        <div v-else class="p-6 max-w-2xl mx-auto space-y-5">
+          <div class="card p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <h1 class="text-xl font-bold text-slate-900 leading-tight">
+                  <span v-if="currentFamilyDetail.spouse1" class="cursor-pointer hover:text-indigo-600" @click="goToPersonFromFamily(currentFamilyDetail.spouse1.person_id)">{{ fullName(currentFamilyDetail.spouse1) }}</span>
+                  <span v-else class="italic text-slate-400">Unknown</span>
+                  &amp;
+                  <span v-if="currentFamilyDetail.spouse2" class="cursor-pointer hover:text-indigo-600" @click="goToPersonFromFamily(currentFamilyDetail.spouse2.person_id)">{{ fullName(currentFamilyDetail.spouse2) }}</span>
+                  <span v-else class="italic text-slate-400">Unknown</span>
+                </h1>
+                <div class="flex flex-wrap gap-x-4 mt-1.5 text-sm text-slate-500">
+                  <span>{{ capitalise(currentFamilyDetail.union_type) || 'Union' }}</span>
+                  <span v-if="currentFamilyDetail.union_date">{{ currentFamilyDetail.union_date }}<span v-if="currentFamilyDetail.union_place">, {{ currentFamilyDetail.union_place }}</span></span>
+                  <span v-if="currentFamilyDetail.union_end_reason" class="text-slate-400">{{ currentFamilyDetail.union_end_reason }}<span v-if="currentFamilyDetail.union_end_date"> · {{ currentFamilyDetail.union_end_date }}</span></span>
+                </div>
+                <span class="text-xs text-slate-400 font-mono mt-2 inline-block">{{ currentFamilyDetail.family_id }}</span>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <button @click="openFamilyModal('edit', currentFamilyDetail)" class="btn-secondary text-xs px-3 py-1.5">Edit</button>
+                <button @click="confirmDeleteFamily(currentFamilyDetail.family_id)" class="btn-danger text-xs px-3 py-1.5">Delete</button>
+              </div>
+            </div>
+            <p v-if="currentFamilyDetail.notes" class="mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 italic leading-relaxed">
+              {{ currentFamilyDetail.notes }}
+            </p>
+          </div>
+
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="section-heading">Children</h2>
+              <button @click="openAddChildModal(currentFamilyDetail)" class="btn-ghost text-xs">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add child
+              </button>
+            </div>
+            <div v-if="currentFamilyDetail.children.length === 0" class="text-sm text-slate-400 py-2">No children in this union.</div>
+            <div v-else class="divide-y divide-slate-100">
+              <div
+                v-for="child in currentFamilyDetail.children"
+                :key="child.person.person_id"
+                class="flex items-center gap-3 py-2.5 group"
+              >
+                <div
+                  :class="['w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 cursor-pointer', avatarColor(child.person)]"
+                  @click="goToPersonFromFamily(child.person.person_id)"
+                >{{ initials(child.person) }}</div>
+                <span
+                  class="text-sm text-slate-700 flex-1 cursor-pointer group-hover:text-indigo-700 transition-colors"
+                  @click="goToPersonFromFamily(child.person.person_id)"
+                >{{ fullName(child.person) }}</span>
+                <span :class="relBadgeClass(child.relationship_type)" class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0">{{ child.relationship_type }}</span>
+                <button
+                  @click="removeChildFromFamily(currentFamilyDetail.family_id, child.person.person_id, child.relationship_type)"
+                  class="text-slate-300 hover:text-red-500 transition-colors font-bold leading-none ml-1"
+                  title="Remove child from this union"
+                >×</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ════════════════ GLOBAL EVENTS VIEW ════════════════ -->
+      <template v-else-if="activeSection === 'events'">
+        <div class="p-6 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base font-bold text-slate-700">All Events</h2>
+            <button @click="openEventModal()" class="btn-primary">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              New Event
+            </button>
+          </div>
+
+          <div v-if="eventsWithParticipants.length === 0" class="card p-12 flex flex-col items-center text-slate-400">
+            <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm font-medium">No events yet.</p>
+            <p class="text-xs mt-1">Create one with "New Event" above.</p>
+          </div>
+
+          <div v-else class="space-y-4">
+            <div
+              v-for="ev in eventsWithParticipants"
+              :key="ev.event_id"
+              :id="'event-' + ev.event_id"
+              :class="['rounded-xl transition-shadow', currentGlobalEventId === ev.event_id ? 'ring-2 ring-indigo-300' : '']"
+            >
+              <event-card
+                :event="ev"
+                mode="global"
+                :exclude-ids="[]"
+                :people-list="peopleList"
+                @select-person="goToPersonFromFamily"
+                @edit="openEventModal(ev)"
+                @unlink="personId => unlinkParticipant(ev.event_id, personId)"
+                @link="(personId, role) => linkParticipantInline(ev.event_id, personId, role)"
+              ></event-card>
+            </div>
+          </div>
+        </div>
+      </template>
     </main><!-- /main -->
   </div><!-- /body layout -->
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      MODAL: PERSON (Add / Edit)
 ════════════════════════════════════════════════════════════════════════════ -->
-<div v-if="showPersonModal" class="modal-backdrop" @click.self="showPersonModal = false">
+<div v-if="showPersonModal" class="modal-backdrop" @click.self="closePersonModal()">
   <div class="modal-box">
     <div class="modal-header">
       <h3 class="text-base font-bold text-slate-800">{{ isEditingPerson ? 'Edit Person' : 'Add New Person' }}</h3>
-      <button @click="showPersonModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
+      <button @click="closePersonModal()" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
     </div>
     <div class="modal-body">
       <div class="grid grid-cols-2 gap-4">
@@ -622,7 +759,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button @click="showPersonModal = false" class="btn-secondary">Cancel</button>
+      <button @click="closePersonModal()" class="btn-secondary">Cancel</button>
       <button
         @click="savePerson()"
         :disabled="isSaving || !personForm.first_name.trim() || !personForm.last_name.trim()"
@@ -639,41 +776,79 @@
   <div class="modal-box">
     <div class="modal-header">
       <h3 class="text-base font-bold text-slate-800">
-        {{ familyModalMode === 'parents' ? 'Link Parent Family' : 'Add Union / Marriage' }}
+        {{ familyModalMode === 'parents' ? 'Link Parent Family'
+           : familyModalMode === 'edit' ? 'Edit Union'
+           : 'Add Union / Marriage' }}
       </h3>
       <button @click="showFamilyModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
     </div>
     <div class="modal-body space-y-4">
 
-      <!-- Parents mode: pick two parents -->
+      <!-- Parents mode: new family vs. attach to an existing one -->
       <template v-if="familyModalMode === 'parents'">
-        <div>
-          <label class="form-label">Parent 1</label>
-          <select v-model="familyForm.spouse1_id" class="form-input">
-            <option value="">— Select person —</option>
-            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
-          </select>
+        <div class="flex gap-1 bg-slate-100 rounded-lg p-1">
+          <button
+            @click="familyLinkMode = 'new'"
+            :class="['flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors', familyLinkMode === 'new' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500']"
+          >Create new family</button>
+          <button
+            @click="familyLinkMode = 'existing'"
+            :class="['flex-1 text-xs font-semibold py-1.5 rounded-md transition-colors', familyLinkMode === 'existing' ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500']"
+          >Use existing family</button>
         </div>
-        <div>
-          <label class="form-label">Parent 2 (optional)</label>
-          <select v-model="familyForm.spouse2_id" class="form-input">
-            <option value="">— None / Unknown —</option>
-            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Relationship of {{ activePerson ? fullName(activePerson) : 'child' }} to this family</label>
-          <select v-model="familyForm.relationship_type" class="form-input">
-            <option value="biological">Biological</option>
-            <option value="adopted">Adopted</option>
-            <option value="step">Step</option>
-            <option value="foster">Foster</option>
-          </select>
-        </div>
+
+        <template v-if="familyLinkMode === 'existing'">
+          <div v-if="familiesWithDetails.length === 0" class="text-sm text-slate-400">No existing unions yet — create a new family instead.</div>
+          <div v-else>
+            <label class="form-label">Existing Family</label>
+            <select v-model="familyForm.existing_family_id" class="form-input">
+              <option value="">— Select family —</option>
+              <option v-for="f in familiesWithDetails" :key="f.family_id" :value="f.family_id">
+                {{ f.spouse1 ? fullName(f.spouse1) : 'Unknown' }} &amp; {{ f.spouse2 ? fullName(f.spouse2) : 'Unknown' }}
+                <template v-if="f.union_date"> ({{ f.union_date }})</template>
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Relationship of {{ activePerson ? fullName(activePerson) : 'child' }} to this family</label>
+            <select v-model="familyForm.relationship_type" class="form-input">
+              <option value="biological">Biological</option>
+              <option value="adopted">Adopted</option>
+              <option value="step">Step</option>
+              <option value="foster">Foster</option>
+            </select>
+          </div>
+        </template>
+
+        <template v-else>
+          <div>
+            <label class="form-label">Parent 1</label>
+            <select v-model="familyForm.spouse1_id" class="form-input">
+              <option value="">— Select person —</option>
+              <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Parent 2 (optional)</label>
+            <select v-model="familyForm.spouse2_id" class="form-input">
+              <option value="">— None / Unknown —</option>
+              <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Relationship of {{ activePerson ? fullName(activePerson) : 'child' }} to this family</label>
+            <select v-model="familyForm.relationship_type" class="form-input">
+              <option value="biological">Biological</option>
+              <option value="adopted">Adopted</option>
+              <option value="step">Step</option>
+              <option value="foster">Foster</option>
+            </select>
+          </div>
+        </template>
       </template>
 
-      <!-- Spouses mode: pick the other spouse -->
-      <template v-else>
+      <!-- Spouses mode: activePerson is one spouse, pick the other -->
+      <template v-else-if="familyModalMode === 'spouses'">
         <div class="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700">
           <strong>{{ activePerson ? fullName(activePerson) : '' }}</strong> will be linked as a spouse in this union.
         </div>
@@ -690,7 +865,35 @@
         </div>
       </template>
 
-      <div class="grid grid-cols-2 gap-4">
+      <!-- New-union mode (from the Families view): pick both spouses freely -->
+      <template v-else-if="familyModalMode === 'new-union'">
+        <div>
+          <label class="form-label">Spouse 1</label>
+          <select v-model="familyForm.spouse1_id" class="form-input">
+            <option value="">— Select person —</option>
+            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Spouse 2 (optional)</label>
+          <select v-model="familyForm.spouse2_id" class="form-input">
+            <option value="">— None / Unknown —</option>
+            <option v-for="p in peopleList" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+          </select>
+        </div>
+      </template>
+
+      <!-- Edit mode: spouses are fixed, only the union's own fields change -->
+      <template v-else-if="familyModalMode === 'edit'">
+        <div class="p-3 bg-slate-50 border border-slate-100 rounded-lg text-sm text-slate-600">
+          {{ familyForm.spouse1_id && peopleById[familyForm.spouse1_id] ? fullName(peopleById[familyForm.spouse1_id]) : 'Unknown' }}
+          &amp;
+          {{ familyForm.spouse2_id && peopleById[familyForm.spouse2_id] ? fullName(peopleById[familyForm.spouse2_id]) : 'Unknown' }}
+        </div>
+      </template>
+
+      <!-- Shared union fields (all modes except "use existing family") -->
+      <div v-if="!(familyModalMode === 'parents' && familyLinkMode === 'existing')" class="grid grid-cols-2 gap-4">
         <div>
           <label class="form-label">Union Type</label>
           <select v-model="familyForm.union_type" class="form-input">
@@ -707,12 +910,73 @@
           <label class="form-label">Union Place</label>
           <input v-model="familyForm.union_place" class="form-input" />
         </div>
+        <div>
+          <label class="form-label">End Date</label>
+          <input v-model="familyForm.union_end_date" class="form-input" placeholder="If applicable" />
+        </div>
+        <div>
+          <label class="form-label">End Reason</label>
+          <select v-model="familyForm.union_end_reason" class="form-input">
+            <option value="">— None —</option>
+            <option value="divorce">Divorce</option>
+            <option value="death">Death</option>
+            <option value="annulment">Annulment</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Notes</label>
+          <textarea v-model="familyForm.notes" class="form-input resize-none" rows="2"></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <button @click="showFamilyModal = false" class="btn-secondary">Cancel</button>
       <button @click="saveFamily()" :disabled="isSaving" class="btn-primary">
         {{ isSaving ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: ADD CHILD (attach an existing or brand-new person to a union)
+════════════════════════════════════════════════════════════════════════════ -->
+<div v-if="showAddChildModal" class="modal-backdrop" @click.self="showAddChildModal = false">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="text-base font-bold text-slate-800">Add Child</h3>
+      <button @click="showAddChildModal = false" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
+    </div>
+    <div class="modal-body space-y-4">
+      <div>
+        <label class="form-label">Person</label>
+        <select v-model="addChildForm.child_id" class="form-input">
+          <option value="">— Select existing person —</option>
+          <option
+            v-for="p in addChildCandidates"
+            :key="p.person_id"
+            :value="p.person_id"
+          >{{ fullName(p) }}</option>
+        </select>
+        <button @click="openNewChildPerson()" class="btn-ghost text-xs mt-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          New person instead
+        </button>
+      </div>
+      <div>
+        <label class="form-label">Relationship to this union</label>
+        <select v-model="addChildForm.relationship_type" class="form-input">
+          <option value="biological">Biological</option>
+          <option value="adopted">Adopted</option>
+          <option value="step">Step</option>
+          <option value="foster">Foster</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button @click="showAddChildModal = false" class="btn-secondary">Cancel</button>
+      <button @click="saveAddChild()" :disabled="isSaving" class="btn-primary">
+        {{ isSaving ? 'Saving…' : 'Add Child' }}
       </button>
     </div>
   </div>
@@ -892,17 +1156,96 @@ function callServer(action, data) {
   });
 }
 
+// ─── Display helpers ──────────────────────────────────────────────────────
+//
+// Pure functions, no Vue instance needed. Exposed on every component via
+// app.config.globalProperties below, so both the root app and the event-card
+// component can call them from their templates without duplicating logic.
+
+function fullName(person) {
+  if (!person) return '';
+  return [person.first_name, person.middle_name, person.last_name]
+    .filter(Boolean).join(' ');
+}
+
+function initials(person) {
+  if (!person) return '?';
+  const f = (person.first_name || '').charAt(0).toUpperCase();
+  const l = (person.last_name  || '').charAt(0).toUpperCase();
+  return (f + l) || '?';
+}
+
+// Deterministic color from person_id so the same person always has the same avatar color
+function avatarColor(person) {
+  const palette = [
+    'bg-violet-200 text-violet-800',
+    'bg-indigo-200 text-indigo-800',
+    'bg-sky-200 text-sky-800',
+    'bg-teal-200 text-teal-800',
+    'bg-emerald-200 text-emerald-800',
+    'bg-amber-200 text-amber-800',
+    'bg-rose-200 text-rose-800',
+    'bg-pink-200 text-pink-800',
+  ];
+  if (!person || !person.person_id) return palette[0];
+  const n = String(person.person_id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return palette[n % palette.length];
+}
+
+function sexLabel(sex) {
+  return { M: 'Male', F: 'Female' }[sex] || 'Unknown';
+}
+
+function sexBadgeClass(sex) {
+  const map = {
+    M: 'bg-sky-100 text-sky-700',
+    F: 'bg-rose-100 text-rose-700',
+  };
+  return 'text-xs font-semibold px-2.5 py-0.5 rounded-full ' + (map[sex] || 'bg-slate-100 text-slate-600');
+}
+
+function relBadgeClass(type) {
+  const map = {
+    biological: 'bg-emerald-100 text-emerald-700',
+    adopted:    'bg-violet-100 text-violet-700',
+    step:       'bg-amber-100 text-amber-700',
+    foster:     'bg-cyan-100 text-cyan-700',
+  };
+  return map[type] || 'bg-slate-100 text-slate-600';
+}
+
+function eventTypeBadgeClass(type) {
+  const map = {
+    birth:       'bg-emerald-100 text-emerald-700',
+    death:       'bg-slate-200 text-slate-600',
+    marriage:    'bg-rose-100 text-rose-700',
+    census:      'bg-indigo-100 text-indigo-700',
+    immigration: 'bg-sky-100 text-sky-700',
+    military:    'bg-amber-100 text-amber-700',
+    graduation:  'bg-violet-100 text-violet-700',
+    residence:   'bg-teal-100 text-teal-700',
+    other:       'bg-slate-100 text-slate-600',
+  };
+  return map[type] || map.other;
+}
+
+function capitalise(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 // ─── Vue 3 app ────────────────────────────────────────────────────────────────
 
 const { createApp } = Vue;
 
-createApp({
+const app = createApp({
 
   // ── Reactive state ───────────────────────────────────────────────────────
 
   data() {
     return {
       // App chrome
+      activeSection: 'people', // 'people' | 'families' | 'events'
       currentView: 'profile',
       notification: null,
       isLoading: false,
@@ -917,11 +1260,18 @@ createApp({
       pedigreePayload: null,
       isPedigreeLoading: false,
 
-      // Currently focused family unit (set when a union card is clicked in Profile)
+      // Currently focused family unit (set when a union card is clicked in Profile,
+      // or a family row is clicked in the Families view)
       currentFamily: null,
 
-      // All events in the system — loaded once and refreshed after writes
+      // All families/children/events in the system — loaded once and refreshed after writes
+      familiesList: [],
+      familyChildrenList: [],
       sharedEvents: [],
+      eventParticipantsList: [],
+
+      // Currently focused event in the global Events view
+      currentGlobalEventId: null,
 
       // Person modal
       showPersonModal: false,
@@ -931,14 +1281,24 @@ createApp({
         sex: '', birth_date: '', birth_place: '', death_date: '',
         death_place: '', is_living: true, notes: '',
       },
+      // Set right before opening the Person modal from "Add child → + New person";
+      // savePerson() attaches the newly created person to this family once saved.
+      pendingChildFamilyId: null,
+      pendingChildRelType: 'biological',
 
       // Family modal
       showFamilyModal: false,
-      familyModalMode: 'parents', // 'parents' | 'spouses'
+      familyModalMode: 'parents', // 'parents' | 'spouses' | 'new-union' | 'edit'
+      familyLinkMode: 'new', // 'new' | 'existing' — only used in 'parents' mode
       familyForm: {
-        spouse1_id: '', spouse2_id: '', union_type: 'married',
-        union_date: '', union_place: '', relationship_type: 'biological',
+        family_id: '', spouse1_id: '', spouse2_id: '', union_type: 'married',
+        union_date: '', union_place: '', union_end_date: '', union_end_reason: '',
+        notes: '', relationship_type: 'biological', existing_family_id: '',
       },
+
+      // Add Child modal (Family Detail panel + Spouses & Children pane)
+      showAddChildModal: false,
+      addChildForm: { family_id: '', child_id: '', relationship_type: 'biological' },
 
       // Event modal
       showEventModal: false,
@@ -950,9 +1310,6 @@ createApp({
       selectedParticipantIds: [],
       participantRoles: {},  // { [person_id]: role string }
       participantSearch: '',
-
-      // Inline participant add state per event: { [event_id]: { personId, role } }
-      inlineAdd: {},
 
       // D3 zoom handle — stored so toolbar buttons can programmatically zoom
       _d3Zoom: null,
@@ -977,85 +1334,62 @@ createApp({
         this.fullName(p).toLowerCase().includes(q)
       );
     },
+
+    // id → person, for resolving FK columns client-side
+    peopleById() {
+      return Object.fromEntries(this.peopleList.map(p => [p.person_id, p]));
+    },
+
+    // Families joined with resolved spouses + children — the client-side
+    // equivalent of what getPedigreePayload does server-side for one person,
+    // applied here to every family so they're independently browsable.
+    familiesWithDetails() {
+      const byId = this.peopleById;
+      return this.familiesList.map(fam => ({
+        ...fam,
+        spouse1: fam.spouse1_id ? (byId[fam.spouse1_id] || null) : null,
+        spouse2: fam.spouse2_id ? (byId[fam.spouse2_id] || null) : null,
+        children: this.familyChildrenList
+          .filter(fc => String(fc.family_id) === String(fam.family_id))
+          .map(fc => ({ person: byId[fc.child_id] || null, relationship_type: fc.relationship_type }))
+          .filter(c => c.person !== null),
+      }));
+    },
+
+    currentFamilyDetail() {
+      if (!this.currentFamily) return null;
+      return this.familiesWithDetails.find(
+        f => f.family_id === this.currentFamily.family_id
+      ) || { ...this.currentFamily, spouse1: null, spouse2: null, children: [] };
+    },
+
+    // People not already linked as a child of the family the Add Child modal
+    // is currently open for — looked up by family_id so it's correct no matter
+    // which entry point (Profile pane or Families view) opened the modal.
+    addChildCandidates() {
+      const fam = this.familiesWithDetails.find(f => f.family_id === this.addChildForm.family_id);
+      const linked = new Set((fam ? fam.children : []).map(c => c.person.person_id));
+      return this.peopleList.filter(p => !linked.has(p.person_id));
+    },
+
+    // All events joined with every participant (no implicit viewpoint —
+    // unlike pedigreePayload.events, which is scoped to one person).
+    eventsWithParticipants() {
+      const byId = this.peopleById;
+      return this.sharedEvents.map(ev => ({
+        ...ev,
+        viewerRole: null,
+        participants: this.eventParticipantsList
+          .filter(ep => String(ep.event_id) === String(ev.event_id))
+          .map(ep => ({ person: byId[ep.person_id] || null, role: ep.role }))
+          .filter(p => p.person !== null),
+      }));
+    },
   },
 
   // ── Methods ───────────────────────────────────────────────────────────────
 
   methods: {
-
-    // ── Display helpers ────────────────────────────────────────────────────
-
-    fullName(person) {
-      if (!person) return '';
-      return [person.first_name, person.middle_name, person.last_name]
-        .filter(Boolean).join(' ');
-    },
-
-    initials(person) {
-      if (!person) return '?';
-      const f = (person.first_name || '').charAt(0).toUpperCase();
-      const l = (person.last_name  || '').charAt(0).toUpperCase();
-      return (f + l) || '?';
-    },
-
-    // Deterministic color from person_id so the same person always has the same avatar color
-    avatarColor(person) {
-      const palette = [
-        'bg-violet-200 text-violet-800',
-        'bg-indigo-200 text-indigo-800',
-        'bg-sky-200 text-sky-800',
-        'bg-teal-200 text-teal-800',
-        'bg-emerald-200 text-emerald-800',
-        'bg-amber-200 text-amber-800',
-        'bg-rose-200 text-rose-800',
-        'bg-pink-200 text-pink-800',
-      ];
-      if (!person || !person.person_id) return palette[0];
-      const n = String(person.person_id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-      return palette[n % palette.length];
-    },
-
-    sexLabel(sex) {
-      return { M: 'Male', F: 'Female' }[sex] || 'Unknown';
-    },
-
-    sexBadgeClass(sex) {
-      const map = {
-        M: 'bg-sky-100 text-sky-700',
-        F: 'bg-rose-100 text-rose-700',
-      };
-      return 'text-xs font-semibold px-2.5 py-0.5 rounded-full ' + (map[sex] || 'bg-slate-100 text-slate-600');
-    },
-
-    relBadgeClass(type) {
-      const map = {
-        biological: 'bg-emerald-100 text-emerald-700',
-        adopted:    'bg-violet-100 text-violet-700',
-        step:       'bg-amber-100 text-amber-700',
-        foster:     'bg-cyan-100 text-cyan-700',
-      };
-      return map[type] || 'bg-slate-100 text-slate-600';
-    },
-
-    eventTypeBadgeClass(type) {
-      const map = {
-        birth:       'bg-emerald-100 text-emerald-700',
-        death:       'bg-slate-200 text-slate-600',
-        marriage:    'bg-rose-100 text-rose-700',
-        census:      'bg-indigo-100 text-indigo-700',
-        immigration: 'bg-sky-100 text-sky-700',
-        military:    'bg-amber-100 text-amber-700',
-        graduation:  'bg-violet-100 text-violet-700',
-        residence:   'bg-teal-100 text-teal-700',
-        other:       'bg-slate-100 text-slate-600',
-      };
-      return map[type] || map.other;
-    },
-
-    capitalise(str) {
-      if (!str) return '';
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    },
 
     // ── Notification ───────────────────────────────────────────────────────
 
@@ -1079,8 +1413,6 @@ createApp({
       try {
         const result = await callServer('listPeople');
         this.peopleList = result.data || [];
-        // Rebuild inlineAdd slots for all events after a people refresh
-        this._rebuildInlineAdd();
       } catch (e) {
         this.notify(e.message, 'error');
       } finally {
@@ -1100,7 +1432,40 @@ createApp({
       }
     },
 
+    async loadEventParticipants() {
+      try {
+        const result = await callServer('listEventParticipants');
+        this.eventParticipantsList = result.data || [];
+      } catch (e) {
+        console.warn('loadEventParticipants:', e.message);
+      }
+    },
+
+    async loadFamilies() {
+      try {
+        const result = await callServer('listFamilies');
+        this.familiesList = result.data || [];
+      } catch (e) {
+        console.warn('loadFamilies:', e.message);
+      }
+    },
+
+    async loadFamilyChildren() {
+      try {
+        const result = await callServer('listFamilyChildren');
+        this.familyChildrenList = result.data || [];
+      } catch (e) {
+        console.warn('loadFamilyChildren:', e.message);
+      }
+    },
+
+    // Refreshes both halves of the Families dataset after any family-affecting write
+    async refreshFamilies() {
+      await Promise.all([this.loadFamilies(), this.loadFamilyChildren()]);
+    },
+
     async selectPerson(personId) {
+      this.activeSection = 'people';
       // Immediately show basic data from the list so the header renders instantly
       this.activePerson = this.peopleList.find(p => p.person_id === personId) || null;
       this.pedigreePayload = null;
@@ -1110,12 +1475,16 @@ createApp({
       try {
         const payload = await callServer('getPedigreePayload', { person_id: personId });
         this.pedigreePayload = payload;
-        this._rebuildInlineAdd();
       } catch (e) {
         this.notify(e.message, 'error');
       } finally {
         this.isPedigreeLoading = false;
       }
+    },
+
+    // Navigate to a person from the Families view or Family Detail panel
+    goToPersonFromFamily(personId) {
+      this.selectPerson(personId);
     },
 
     openPersonModal(person) {
@@ -1134,6 +1503,13 @@ createApp({
       this.showPersonModal = true;
     },
 
+    // Cancel/close the Person modal — also drops a pending "+ New person"
+    // family attachment so it can't accidentally apply to an unrelated save later.
+    closePersonModal() {
+      this.showPersonModal = false;
+      this.pendingChildFamilyId = null;
+    },
+
     async savePerson() {
       this.isSaving = true;
       try {
@@ -1141,6 +1517,19 @@ createApp({
         this.notify(this.isEditingPerson ? 'Person updated.' : 'Person added.');
         this.showPersonModal = false;
         await this.loadPeople();
+
+        // "+ New person" from the Add Child modal: attach the freshly created
+        // person to the family they were opened for.
+        if (!this.isEditingPerson && this.pendingChildFamilyId) {
+          await callServer('addChild', {
+            family_id: this.pendingChildFamilyId,
+            child_id: result.person_id,
+            relationship_type: this.pendingChildRelType || 'biological',
+          });
+          this.pendingChildFamilyId = null;
+          await this.refreshFamilies();
+        }
+
         await this.selectPerson(result.person_id);
       } catch (e) {
         this.notify(e.message, 'error');
@@ -1164,32 +1553,85 @@ createApp({
 
     // ── Families ───────────────────────────────────────────────────────────
 
-    openFamilyModal(mode) {
+    // mode: 'parents' (Link Family, from a child's Profile) | 'spouses' (Add union,
+    // from a person's Spouses & Children pane) | 'new-union' (Add Union, from the
+    // Families sidebar, no implied person) | 'edit' (editing an existing union's
+    // own fields — spouses are fixed, only union details change)
+    openFamilyModal(mode, family) {
       this.familyModalMode = mode;
-      this.familyForm = {
-        spouse1_id: mode === 'spouses' ? (this.activePerson ? this.activePerson.person_id : '') : '',
-        spouse2_id: '',
-        union_type: 'married',
-        union_date: '',
-        union_place: '',
-        relationship_type: 'biological',
-      };
+      this.familyLinkMode = 'new';
+      if (mode === 'edit' && family) {
+        this.familyForm = {
+          family_id: family.family_id,
+          spouse1_id: family.spouse1_id || '',
+          spouse2_id: family.spouse2_id || '',
+          union_type: family.union_type || 'married',
+          union_date: family.union_date || '',
+          union_place: family.union_place || '',
+          union_end_date: family.union_end_date || '',
+          union_end_reason: family.union_end_reason || '',
+          notes: family.notes || '',
+          relationship_type: 'biological',
+          existing_family_id: '',
+        };
+      } else {
+        this.familyForm = {
+          family_id: '',
+          spouse1_id: mode === 'spouses' ? (this.activePerson ? this.activePerson.person_id : '') : '',
+          spouse2_id: '',
+          union_type: 'married',
+          union_date: '',
+          union_place: '',
+          union_end_date: '',
+          union_end_reason: '',
+          notes: '',
+          relationship_type: 'biological',
+          existing_family_id: '',
+        };
+      }
       this.showFamilyModal = true;
     },
 
     async saveFamily() {
       this.isSaving = true;
       try {
+        // "Use existing family": skip creating/updating a Families row entirely —
+        // just attach the active person as a child of the chosen union. This is
+        // what keeps two children of the same couple pointing at one shared
+        // union instead of minting a duplicate Families row each time.
+        if (this.familyModalMode === 'parents' && this.familyLinkMode === 'existing') {
+          if (!this.familyForm.existing_family_id) {
+            this.notify('Choose a family to link to.', 'error');
+            return;
+          }
+          if (this.activePerson) {
+            await callServer('addChild', {
+              family_id: this.familyForm.existing_family_id,
+              child_id: this.activePerson.person_id,
+              relationship_type: this.familyForm.relationship_type || 'biological',
+            });
+          }
+          this.notify('Linked to existing family.');
+          this.showFamilyModal = false;
+          await this.refreshFamilies();
+          if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
+          return;
+        }
+
         const payload = {
+          family_id: this.familyForm.family_id,
           spouse1_id: this.familyForm.spouse1_id,
           spouse2_id: this.familyForm.spouse2_id,
           union_type: this.familyForm.union_type,
           union_date: this.familyForm.union_date,
           union_place: this.familyForm.union_place,
+          union_end_date: this.familyForm.union_end_date,
+          union_end_reason: this.familyForm.union_end_reason,
+          notes: this.familyForm.notes,
         };
         const result = await callServer('saveFamily', payload);
 
-        // In 'parents' mode, also register activePerson as a child of this new family
+        // In 'parents' + 'new' mode, also register activePerson as a child of this new family
         if (this.familyModalMode === 'parents' && this.activePerson) {
           await callServer('addChild', {
             family_id: result.family_id,
@@ -1200,11 +1642,78 @@ createApp({
 
         this.notify('Family saved.');
         this.showFamilyModal = false;
+        await this.refreshFamilies();
         if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
       } catch (e) {
         this.notify(e.message, 'error');
       } finally {
         this.isSaving = false;
+      }
+    },
+
+    async confirmDeleteFamily(familyId) {
+      if (!confirm('Delete this union? It will be removed from all linked children. This cannot be undone.')) return;
+      try {
+        await callServer('deleteFamily', { family_id: familyId });
+        this.notify('Union deleted.');
+        if (this.currentFamily && this.currentFamily.family_id === familyId) this.currentFamily = null;
+        await this.refreshFamilies();
+        if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      }
+    },
+
+    // ── Family_Children (Add/Remove child on a union) ───────────────────────
+
+    openAddChildModal(family) {
+      this.addChildForm = { family_id: family.family_id, child_id: '', relationship_type: 'biological' };
+      this.showAddChildModal = true;
+    },
+
+    async saveAddChild() {
+      if (!this.addChildForm.child_id) {
+        this.notify('Choose a person to add.', 'error');
+        return;
+      }
+      this.isSaving = true;
+      try {
+        await callServer('addChild', {
+          family_id: this.addChildForm.family_id,
+          child_id: this.addChildForm.child_id,
+          relationship_type: this.addChildForm.relationship_type,
+        });
+        this.notify('Child added to union.');
+        this.showAddChildModal = false;
+        await this.refreshFamilies();
+        if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
+      } catch (e) {
+        this.notify(e.message, 'error');
+      } finally {
+        this.isSaving = false;
+      }
+    },
+
+    // "+ New person" inside the Add Child modal: open the Person modal and
+    // remember which family to attach them to once they're saved (see savePerson()).
+    openNewChildPerson() {
+      this.pendingChildFamilyId = this.addChildForm.family_id;
+      this.pendingChildRelType = this.addChildForm.relationship_type;
+      this.showAddChildModal = false;
+      this.openPersonModal();
+    },
+
+    async removeChildFromFamily(familyId, childId, relationshipType) {
+      if (!confirm('Remove this child from the union?')) return;
+      try {
+        await callServer('removeChild', {
+          family_id: familyId, child_id: childId, relationship_type: relationshipType,
+        });
+        this.notify('Child removed from union.');
+        await this.refreshFamilies();
+        if (this.activePerson) await this.selectPerson(this.activePerson.person_id);
+      } catch (e) {
+        this.notify(e.message, 'error');
       }
     },
 
@@ -1279,6 +1788,7 @@ createApp({
         await Promise.all([
           this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
           this.loadSharedEvents(),
+          this.loadEventParticipants(),
         ]);
       } catch (e) {
         this.notify(e.message, 'error');
@@ -1294,36 +1804,28 @@ createApp({
         await Promise.all([
           this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
           this.loadSharedEvents(),
+          this.loadEventParticipants(),
         ]);
       } catch (e) {
         this.notify(e.message, 'error');
       }
     },
 
-    // ── Inline participant link (on existing event cards) ──────────────────
+    // ── Inline participant link (on event cards) ───────────────────────────
 
-    peopleNotInEvent(event) {
-      const inEvent = new Set();
-      if (this.activePerson) inEvent.add(this.activePerson.person_id);
-      (event.co_participants || []).forEach(cp => inEvent.add(cp.person.person_id));
-      return this.peopleList.filter(p => !inEvent.has(p.person_id));
-    },
-
-    async linkParticipantInline(eventId) {
-      const state = this.inlineAdd[eventId];
-      if (!state || !state.personId) return;
+    async linkParticipantInline(eventId, personId, role) {
+      if (!personId) return;
       try {
         await callServer('addEventParticipant', {
           event_id: eventId,
-          person_id: state.personId,
-          role: state.role || 'participant',
+          person_id: personId,
+          role: role || 'participant',
         });
         this.notify('Participant linked.');
-        state.personId = '';
-        state.role = 'participant';
         await Promise.all([
           this.activePerson ? this.selectPerson(this.activePerson.person_id) : Promise.resolve(),
           this.loadSharedEvents(),
+          this.loadEventParticipants(),
         ]);
       } catch (e) {
         this.notify(e.message, 'error');
@@ -1672,16 +2174,6 @@ createApp({
         d3.zoomIdentity.translate(W / 2, H / 2)
       );
     },
-
-    // Ensures every event in the current pedigreePayload has a slot in inlineAdd
-    _rebuildInlineAdd() {
-      if (!this.pedigreePayload || !this.pedigreePayload.events) return;
-      this.pedigreePayload.events.forEach(event => {
-        if (!this.inlineAdd[event.event_id]) {
-          this.inlineAdd[event.event_id] = { personId: '', role: 'participant' };
-        }
-      });
-    },
   },
 
   // ── Watchers ──────────────────────────────────────────────────────────────
@@ -1704,6 +2196,13 @@ createApp({
         this.$nextTick(() => this.drawTree());
       }
     },
+    currentGlobalEventId(id) {
+      if (!id) return;
+      this.$nextTick(() => {
+        const el = document.getElementById('event-' + id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    },
   },
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -1711,9 +2210,131 @@ createApp({
   mounted() {
     this.loadPeople();
     this.loadSharedEvents();
+    this.loadEventParticipants();
+    this.loadFamilies();
+    this.loadFamilyChildren();
   },
 
-}).mount('#app');
+});
+
+Object.assign(app.config.globalProperties, {
+  fullName, initials, avatarColor, sexLabel, sexBadgeClass, relBadgeClass, eventTypeBadgeClass, capitalise,
+});
+
+// ─── event-card component ──────────────────────────────────────────────────
+//
+// Shared by the per-person Events tab (mode="person") and the global Events
+// view (mode="global"). `event` must already have `viewerRole` (nullable) and
+// `participants` resolved — see eventsWithParticipants and the per-person
+// adapter in the Events tab template.
+
+app.component('event-card', {
+  props: {
+    event: { type: Object, required: true },
+    mode: { type: String, default: 'global' }, // 'person' | 'global'
+    excludeIds: { type: Array, default: () => [] },
+    peopleList: { type: Array, default: () => [] },
+  },
+  emits: ['select-person', 'edit', 'unlink', 'link'],
+  data() {
+    return { linkPersonId: '', linkRole: 'participant' };
+  },
+  computed: {
+    availablePeople() {
+      const taken = new Set(this.excludeIds);
+      (this.event.participants || []).forEach(p => taken.add(p.person.person_id));
+      return this.peopleList.filter(p => !taken.has(p.person_id));
+    },
+  },
+  methods: {
+    doLink() {
+      if (!this.linkPersonId) return;
+      this.$emit('link', this.linkPersonId, this.linkRole);
+      this.linkPersonId = '';
+      this.linkRole = 'participant';
+    },
+  },
+  template: `
+    <div class="card overflow-hidden">
+      <div class="flex items-start gap-4 p-5">
+        <div class="shrink-0 pt-0.5">
+          <span :class="eventTypeBadgeClass(event.event_type)" class="text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+            {{ event.event_type }}
+          </span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-base font-semibold text-slate-800">{{ event.title || capitalise(event.event_type) }}</div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-sm text-slate-500">
+            <span v-if="event.event_date">{{ event.event_date }}</span>
+            <span v-if="event.event_place" class="flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              {{ event.event_place }}
+            </span>
+          </div>
+          <p v-if="event.description" class="text-sm text-slate-600 mt-1.5">{{ event.description }}</p>
+          <p v-if="event.source_citation" class="text-xs text-slate-400 mt-1 italic">Source: {{ event.source_citation }}</p>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <template v-if="mode === 'person' && event.viewerRole">
+              <span class="text-xs text-slate-500">Your role:</span>
+              <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">{{ event.viewerRole }}</span>
+              <span v-if="event.participants && event.participants.length" class="text-slate-300">|</span>
+              <span v-if="event.participants && event.participants.length" class="text-xs text-slate-500">Also present:</span>
+            </template>
+            <span v-else-if="event.participants && event.participants.length" class="text-xs text-slate-500">Participants:</span>
+            <span
+              v-for="p in event.participants"
+              :key="p.person.person_id"
+              class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full"
+            >
+              <span class="cursor-pointer hover:text-indigo-600 transition-colors" @click="$emit('select-person', p.person.person_id)">
+                {{ fullName(p.person) }}
+              </span>
+              <span class="text-slate-400">({{ p.role }})</span>
+              <button
+                @click="$emit('unlink', p.person.person_id)"
+                class="text-slate-300 hover:text-red-500 transition-colors font-bold leading-none ml-0.5"
+                title="Remove participant"
+              >×</button>
+            </span>
+          </div>
+
+          <!-- Inline: link an additional participant to this existing event -->
+          <div class="mt-3 flex items-center gap-2 flex-wrap">
+            <select
+              v-model="linkPersonId"
+              class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
+            >
+              <option value="">+ Link person…</option>
+              <option v-for="p in availablePeople" :key="p.person_id" :value="p.person_id">{{ fullName(p) }}</option>
+            </select>
+            <select
+              v-if="linkPersonId"
+              v-model="linkRole"
+              class="text-xs border border-slate-200 rounded-lg px-2 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-200"
+            >
+              <option value="subject">subject</option>
+              <option value="spouse">spouse</option>
+              <option value="child">child</option>
+              <option value="parent">parent</option>
+              <option value="witness">witness</option>
+              <option value="informant">informant</option>
+              <option value="participant">participant</option>
+            </select>
+            <button
+              v-if="linkPersonId"
+              @click="doLink"
+              class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-lg transition-colors font-medium"
+            >Link</button>
+          </div>
+        </div>
+        <button @click="$emit('edit')" class="btn-secondary text-xs px-2.5 py-1.5 shrink-0">Edit</button>
+      </div>
+    </div>
+  `,
+});
+
+app.mount('#app');
 </script>
 </body>
 </html>
