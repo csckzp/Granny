@@ -34,6 +34,7 @@ A lightweight, multi-user family history manager that runs entirely inside Googl
 |---|---|
 | `Code.gs` | Apps Script backend — HTTP entry points, router, all CRUD functions |
 | `Index.html` | Complete single-page frontend — Vue app, D3 tree, modals, styles |
+| `create_template.py` | Python script that generates the pre-configured `granny_template.xlsx` |
 | `schema.md` | Full column-level schema reference with FK diagram and JSON assembly notes |
 
 ---
@@ -50,38 +51,63 @@ A lightweight, multi-user family history manager that runs entirely inside Googl
 
 ### Step 1 — Create the Google Spreadsheet
 
+The easiest way is to generate the template file with the included Python script, then convert it in Google Drive. Manual creation is also documented below if you prefer.
+
+#### Option A — Generate from the Python template (recommended)
+
+1. Make sure Python 3 and `openpyxl` are installed:
+   ```bash
+   pip install openpyxl
+   ```
+2. Run the script:
+   ```bash
+   python create_template.py
+   # → Saved granny_template.xlsx
+   ```
+3. Upload the file to Google Drive:
+   **Drive → New → File upload → select `granny_template.xlsx`**
+4. Right-click the uploaded file → **Open with → Google Sheets**.
+5. Inside Google Sheets: **File → Save as Google Sheets**.
+6. Name the new sheet **Granny** (or any name you prefer) and click **OK**.
+
+The resulting sheet has all six tabs, bold indigo headers, frozen header rows, column widths, and dropdown validation — ready to go.
+
+---
+
+#### Option B — Create manually
+
 1. Go to [sheets.google.com](https://sheets.google.com) and create a **Blank** spreadsheet.
 2. Name it **Granny** (or any name you prefer).
-3. You will need **six sheet tabs** with exact names and headers. Create them now by clicking the **+** button at the bottom of the screen for each new tab.
+3. Create six sheet tabs by clicking the **+** button at the bottom.
 
 **Tab names are case-sensitive. Headers must be in row 1.**
 
-#### Tab 1: `Users`
+##### Tab 1: `Users`
 ```
 user_id | email | display_name | role | created_at
 ```
 
-#### Tab 2: `People`
+##### Tab 2: `People`
 ```
 person_id | first_name | middle_name | last_name | sex | birth_date | birth_place | death_date | death_place | is_living | notes | created_by | created_at | updated_at
 ```
 
-#### Tab 3: `Families`
+##### Tab 3: `Families`
 ```
 family_id | spouse1_id | spouse2_id | union_type | union_date | union_place | union_end_date | union_end_reason | notes | created_by | created_at | updated_at
 ```
 
-#### Tab 4: `Family_Children`
+##### Tab 4: `Family_Children`
 ```
 family_id | child_id | relationship_type | notes
 ```
 
-#### Tab 5: `Events`
+##### Tab 5: `Events`
 ```
 event_id | event_type | event_date | event_place | title | description | source_citation | created_by | created_at | updated_at
 ```
 
-#### Tab 6: `Event_Participants`
+##### Tab 6: `Event_Participants`
 ```
 event_id | person_id | role | notes
 ```
