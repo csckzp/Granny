@@ -34,7 +34,8 @@ A lightweight, multi-user family history manager that runs entirely inside Googl
 |---|---|
 | `Code.gs` | Apps Script backend — HTTP entry points, router, all CRUD functions |
 | `Index.html` | Complete single-page frontend — Vue app, D3 tree, modals, styles |
-| `create_template.py` | Python script that generates the pre-configured `granny_template.xlsx` |
+| `deploy.py` | Automated setup script — creates the spreadsheet, Apps Script project, and uploads all code |
+| `create_template.py` | Standalone script that generates `granny_template.xlsx` (offline, no Google auth needed) |
 | `schema.md` | Full column-level schema reference with FK diagram and JSON assembly notes |
 
 ---
@@ -44,111 +45,63 @@ A lightweight, multi-user family history manager that runs entirely inside Googl
 ### Prerequisites
 
 - A Google account
-- Access to [Google Drive](https://drive.google.com) and [Google Sheets](https://sheets.google.com)
-- No local tools required
+- Python 3.9+ with `pip`
+- Access to [Google Drive](https://drive.google.com)
 
 ---
 
-### Step 1 — Create the Google Spreadsheet
+### Step 1 — One-time Google Cloud Setup
 
-The easiest way is to generate the template file with the included Python script, then convert it in Google Drive. Manual creation is also documented below if you prefer.
+`deploy.py` uses two Google APIs (Drive and Apps Script). You need to create credentials once.
 
-#### Option A — Generate from the Python template (recommended)
-
-1. Make sure Python 3 and `openpyxl` are installed:
-   ```bash
-   pip install openpyxl
-   ```
-2. Run the script:
-   ```bash
-   python create_template.py
-   # → Saved granny_template.xlsx
-   ```
-3. Upload the file to Google Drive:
-   **Drive → New → File upload → select `granny_template.xlsx`**
-4. Right-click the uploaded file → **Open with → Google Sheets**.
-5. Inside Google Sheets: **File → Save as Google Sheets**.
-6. Name the new sheet **Granny** (or any name you prefer) and click **OK**.
-
-The resulting sheet has all six tabs, bold indigo headers, frozen header rows, column widths, and dropdown validation — ready to go.
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create or select a project.
+2. Enable both APIs:
+   - **APIs & Services → Library** → search `Google Drive API` → **Enable**
+   - **APIs & Services → Library** → search `Apps Script API` → **Enable**
+3. Create OAuth credentials:
+   - **APIs & Services → Credentials → Create credentials → OAuth client ID**
+   - Application type: **Desktop app** → **Create**
+   - Click **Download JSON**, rename the file to `credentials.json`, and place it in the same folder as `deploy.py`.
+4. Enable the Apps Script API for your Google account *(one-time per account)*:
+   - Go to [script.google.com/home/usersettings](https://script.google.com/home/usersettings)
+   - Toggle **Google Apps Script API** to **On**
 
 ---
 
-#### Option B — Create manually
+### Step 2 — Install Dependencies
 
-1. Go to [sheets.google.com](https://sheets.google.com) and create a **Blank** spreadsheet.
-2. Name it **Granny** (or any name you prefer).
-3. Create six sheet tabs by clicking the **+** button at the bottom.
-
-**Tab names are case-sensitive. Headers must be in row 1.**
-
-##### Tab 1: `Users`
-```
-user_id | email | display_name | role | created_at
-```
-
-##### Tab 2: `People`
-```
-person_id | first_name | middle_name | last_name | sex | birth_date | birth_place | death_date | death_place | is_living | notes | created_by | created_at | updated_at
-```
-
-##### Tab 3: `Families`
-```
-family_id | spouse1_id | spouse2_id | union_type | union_date | union_place | union_end_date | union_end_reason | notes | created_by | created_at | updated_at
-```
-
-##### Tab 4: `Family_Children`
-```
-family_id | child_id | relationship_type | notes
-```
-
-##### Tab 5: `Events`
-```
-event_id | event_type | event_date | event_place | title | description | source_citation | created_by | created_at | updated_at
-```
-
-##### Tab 6: `Event_Participants`
-```
-event_id | person_id | role | notes
-```
-
-> **Tip:** You can delete the default `Sheet1` tab once all six are created.
-
----
-
-### Step 2 — Open the Apps Script Editor
-
-1. In your spreadsheet, click **Extensions → Apps Script**.
-2. The script editor opens in a new tab, bound to your spreadsheet.
-
----
-
-### Step 3 — Add the Backend (`Code.gs`)
-
-1. In the editor, click on the default file named **Code.gs** in the left sidebar.
-2. **Select all** existing content and **delete** it (the default `myFunction` stub).
-3. Paste the entire contents of `Code.gs` from this repository.
-4. Click the **Save** icon (or press `Ctrl+S` / `Cmd+S`).
-
----
-
-### Step 4 — Add the Frontend (`Index.html`)
-
-1. In the editor, click the **+** button next to "Files" in the left sidebar and choose **HTML**.
-2. Name the file **`Index`** (exactly — no extension; Apps Script appends `.html` automatically).
-3. **Select all** default content and **delete** it.
-4. Paste the entire contents of `Index.html` from this repository.
-5. Save the file.
-
-Your file list in the editor should now show:
-```
-Code.gs
-Index.html
+```bash
+pip install openpyxl google-api-python-client google-auth-oauthlib
 ```
 
 ---
 
-### Step 5 — Register Yourself as an Admin
+### Step 3 — Run `deploy.py`
+
+```bash
+python deploy.py
+```
+
+The script will:
+- Open a browser window asking you to sign in with your Google account and grant access.
+- Create the **Granny** spreadsheet on your Drive with all 6 tabs and headers.
+- Create a container-bound Apps Script project named **Granny**.
+- Upload `Code.gs` and `Index.html` into the project automatically.
+
+When it finishes it prints two URLs:
+
+```
+Spreadsheet : https://docs.google.com/spreadsheets/d/...
+Script editor: https://script.google.com/d/.../edit
+```
+
+> **Credentials are cached** in `token.json` after the first run. Subsequent runs skip the browser login.
+
+> **Using `create_template.py` instead?** If you only want the XLSX without any Google API calls, run `python create_template.py` to generate `granny_template.xlsx`, then upload and convert it manually.
+
+---
+
+### Step 4 — Register Yourself as an Admin
 
 The backend enforces roles on every write. Before the first deploy, add yourself to the `Users` sheet manually so the app recognises you.
 
@@ -168,7 +121,7 @@ The backend enforces roles on every write. Before the first deploy, add yourself
 
 ---
 
-### Step 6 — Deploy as a Web App
+### Step 5 — Deploy as a Web App
 
 1. In the Apps Script editor, click **Deploy → New deployment**.
 2. Click the **gear icon** next to "Select type" and choose **Web app**.
@@ -190,7 +143,7 @@ The backend enforces roles on every write. Before the first deploy, add yourself
 
 ---
 
-### Step 7 — Open the App
+### Step 6 — Open the App
 
 Paste the Web app URL into your browser. You should see the Granny interface load with an empty sidebar ready for your first person.
 

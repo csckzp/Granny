@@ -229,15 +229,17 @@ def add_sheet(wb: openpyxl.Workbook, tab_name: str, headers: list[str]) -> None:
     ws.auto_filter.ref = f"A1:{last_col}1"
 
 
-def main():
+def build_workbook() -> openpyxl.Workbook:
+    """Return a fully configured Workbook — all 6 tabs, headers, styles, validation."""
     wb = openpyxl.Workbook()
-
-    # Remove the default blank sheet openpyxl always creates
-    wb.remove(wb.active)
-
+    wb.remove(wb.active)  # remove the default blank sheet
     for tab_name, headers in SCHEMA.items():
         add_sheet(wb, tab_name, headers)
+    return wb
 
+
+def main():
+    wb = build_workbook()
     output_path = "granny_template.xlsx"
     wb.save(output_path)
     print(f"Saved {output_path}")
@@ -247,6 +249,8 @@ def main():
     print("  2. Right-click → Open with → Google Sheets")
     print("  3. File → Save as Google Sheets")
     print("  4. Open Extensions → Apps Script and add Code.gs + Index.html")
+    print()
+    print("  Or run deploy.py to automate steps 1-4.")
 
 
 if __name__ == "__main__":
